@@ -54,3 +54,12 @@ INSERT INTO offr (course, starts, status, maxcap, trainer, loc) VALUES ('DBCENT'
 -- Should fail, no trainer and status = CONF
 INSERT INTO offr (course, starts, status, maxcap, trainer, loc) VALUES ('J2EE', DATEADD(DAY, 2, GETDATE()), 'CONF', 20, NULL, 'SAN FRANCISCO')
 ROLLBACK TRANSACTION
+
+
+-- Reset DB voor casus
+ALTER TABLE grd
+	DROP CONSTRAINT CHK_grade_size
+ALTER TABLE grd
+	DROP CONSTRAINT U_llimit
+ALTER TABLE offr
+	DROP CONSTRAINT CHK_trainer_status
