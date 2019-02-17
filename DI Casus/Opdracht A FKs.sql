@@ -8,6 +8,8 @@ go
 ALTER TABLE emp
 	ADD CONSTRAINT FK_emp_dept
 	FOREIGN KEY (deptno) REFERENCES dept(deptno)
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
 go
 
 
@@ -17,6 +19,8 @@ go
 ALTER TABLE dept
 	ADD CONSTRAINT FK_dept_emp
 	FOREIGN KEY (mgr) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
 go
 
 
@@ -26,6 +30,8 @@ go
 ALTER TABLE hist
 	ADD CONSTRAINT FK_hist_dept
 	FOREIGN KEY (deptno) REFERENCES dept(deptno)
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
 go
 
 
@@ -35,6 +41,7 @@ go
 ALTER TABLE hist
 	ADD CONSTRAINT FK_hist_emp
 	FOREIGN KEY (empno) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
 	ON DELETE CASCADE
 go
 
@@ -45,6 +52,8 @@ go
 ALTER TABLE memp
 	ADD CONSTRAINT FK_memp_emp_mgr
 	FOREIGN KEY (mgr) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
 go
 
 
@@ -54,6 +63,8 @@ go
 ALTER TABLE memp
 	ADD CONSTRAINT FK_memp_emp_empno
 	FOREIGN KEY (empno) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
 go
 
 
@@ -63,7 +74,19 @@ go
 ALTER TABLE reg
 	ADD CONSTRAINT FK_reg_emp
 	FOREIGN KEY (stud) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
 	ON DELETE CASCADE
+go
+
+
+/*******************************************************************************************
+	FK reg -> offr 
+*******************************************************************************************/
+ALTER TABLE reg
+	ADD CONSTRAINT FK_reg_offr
+	FOREIGN KEY (course, starts) REFERENCES offr(course, starts)
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
 go
 
 
@@ -74,6 +97,7 @@ ALTER TABLE emp
 	ADD CONSTRAINT FK_emp_grd
 	FOREIGN KEY (sgrade) REFERENCES grd(grade)
 	ON UPDATE CASCADE
+	ON DELETE NO ACTION
 go
 
 
@@ -83,6 +107,7 @@ go
 ALTER TABLE term
 	ADD CONSTRAINT FK_term_emp
 	FOREIGN KEY (empno) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
 	ON DELETE CASCADE
 go
 
@@ -93,5 +118,28 @@ go
 ALTER TABLE srep
 	ADD CONSTRAINT FK_srep_emp
 	FOREIGN KEY (empno) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
 	ON DELETE CASCADE
+go
+
+
+/*******************************************************************************************
+	FK offr -> emp (ON DELETE SET NULL)
+*******************************************************************************************/
+ALTER TABLE offr
+	ADD CONSTRAINT FK_offr_emp
+	FOREIGN KEY (trainer) REFERENCES emp(empno)
+	ON UPDATE NO ACTION
+	ON DELETE SET NULL
+go
+
+
+/*******************************************************************************************
+	FK offr -> crs (ON UPDATE CASCADE)
+*******************************************************************************************/
+ALTER TABLE offr
+	ADD CONSTRAINT FK_offr_crs
+	FOREIGN KEY (course) REFERENCES crs(code)
+	ON UPDATE CASCADE
+	ON DELETE NO ACTION
 go
