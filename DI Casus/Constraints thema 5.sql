@@ -43,7 +43,7 @@ ROLLBACK TRANSACTION
 
 /*******************************************************************************************
 b) Er is maar maximaal één werknemer de president van het bedrijf in kwestie.
-c) Een verkoop medewerker kan niet meer verdienen dan zijn baas (houdt rekening met de commissie die ook tot het salaris wordt gerekend en een jaarlijkse commissiebedrag betreft, terwijl het reguliere basissalaris een maandsalaris betreft).
+
 d) Een trainer kan geen cursus geven voor zijn/haar datum in dienst treding.
 e) Een manager moet tevens werknemer zijn van de afdeling die zij/hij bestuurt.
 
@@ -52,19 +52,96 @@ e) Een manager moet tevens werknemer zijn van de afdeling die zij/hij bestuurt.
 Wijzigingen van salarissen (commissie en maandsalaris) moeten gelogd worden in een logtabel. In die tabel registreren we wie (de user), wanneer, welke wijziging heeft aangebracht. Ontwerp een tabel en schrijf een update stored procedure die deze functionaliteit implementeert. 		
 *******************************************************************************************/
 GO
-CREATE PROCEDURE dbo.PROC_NumOfPresidents
+CREATE PROCEDURE dbo.usp_CheckPresidentCount
 AS
-	IF (SELECT COUNT(*)
+	IF (
+		SELECT COUNT(*)
 		FROM emp
-		WHERE job = 'PRESIDENT') > 1
-		RAISERROR ('Er zijn meerdere presidenten', 11, 1)
-	ELSE
-		RAISERROR ('There are <= 1 presidents', 1, 1)
+		WHERE job = 'PRESIDENT') >= 1
+		RAISERROR ('Er is al een president', 11, 1)
+GO
+CREATE PROC dbo.usp_InsEmp @empno NUMERIC(4,0),
+	@ename VARCHAR(8),
+	@job VARCHAR(9),
+	@born DATE,
+	@hired DATE,
+	@sgrade NUMERIC(2,0),
+	@msal NUMERIC(7,2),
+	@username VARCHAR(15),
+	@deptno NUMERIC(2,0)
+AS
+BEGIN
+	BEGIN TRY
+		IF (@job = 'PRESIDENT')
+			EXEC dbo.usp_CheckPresidentCount
+		INSERT INTO emp VALUES (@empno, @ename, @job, @born, @hired, @sgrade, @msal, @username, @deptno)
+	END TRY
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
 GO
 
-EXEC dbo.PROC_NumOfPresidents
+BEGIN TRANSACTION
+EXEC dbo.usp_InsEmp 1999, 'TEST', 'PRESIDENT', '01-01-2000', '19-jan-2019', 10, 10000, 'TEST_PRES', 11 --Er is al een president
+EXEC dbo.usp_InsEmp 1999, 'TEST2', 'ADMIN', '01-01-2000', '19-jan-2019', 10, 10000, 'TEST_PRES2', 10 -- Moet slagen
+ROLLBACK TRANSACTION
+
+GO
+CREATE PROC dbo.usp_UpdEmpJob @newJob VARCHAR(9), @empno NUMERIC(4,0)
+AS
+BEGIN
+	BEGIN TRY
+		IF(@newJob = 'PRESIDENT')
+			EXEC dbo.usp_CheckPresidentCount
+		UPDATE emp
+			SET job = @newJob
+			WHERE empno = @empno
+	END TRY
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
+
+BEGIN TRAN
+	EXEC dbo.usp_UpdEmpJob 'PRESIDENT', 1000 --Huidige president
+	EXEC dbo.usp_UpdEmpJob 'ADMIN', 1000 --Huidige president, moet slagen
+	EXEC dbo.usp_UpdEmpJob 'PRESIDENT', 1001 -- Moet falen, tweede president
+	EXEC dbo.usp_UpdEmpJob 'ADMIN', 1001 -- moet slagen
+ROLLBACK TRAN
 
 
+
+/*******************************************************************************************
+	c) Een verkoop medewerker kan niet meer verdienen dan zijn baas
+	(houdt rekening met de commissie die ook tot het salaris wordt gerekend en een jaarlijkse commissiebedrag betreft, 
+	terwijl het reguliere basissalaris een maandsalaris betreft).
+
+	Moet updates en deletes in memp en emp table checken
+*******************************************************************************************/
+GO
+CREATE PROC dbo_usp_check_salaries @mgr NUMERIC(4,0), @emp NUMERIC(4,0)
+AS
+BEGIN
+	IF 
+		(
+			SELECT msal * 12 + s.comm
+				FROM emp e INNER JOIN srep s ON e.empno = s.empno
+				WHERE e.empno = @emp
+		) > 
+		(
+			SELECT msal * 12
+				FROM emp e
+				WHERE e.empno = @empno
+		)
+		THROW
+END
+GO
 -- Reset DB voor casus
 DROP PROCEDURE dbo.PROC_max_number_of_departements_to_manage
-DROP PROCEDURE dbo.PROC_NumOfPresidents
+DROP PROCEDURE dbo.usp_CheckPresidentCount
+DROP PROC dbo.usp_InsEmp
+DROP PROC dbo.usp_UpdEmpJob
+DROP PROC dbo.PROC_NumOfPresidents
+DROP PROC dbo.usp_check_salaries
