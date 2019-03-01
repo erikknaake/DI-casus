@@ -11,7 +11,7 @@ GO
 CREATE PROC testEmps.SetUp
 AS
 BEGIN
-	EXEC tSQLt.FakeTable @TableName = 'dbo.emp'
+	EXEC tSQLt.FakeTable @TableName = 'dbo.emp' -- Use of @SchemaName has been deprecated, use of tablename with schemaName prefixed is now prefered
 END
 
 
