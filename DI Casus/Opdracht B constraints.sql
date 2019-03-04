@@ -87,12 +87,13 @@ BEGIN
 							FROM emp
 							WHERE empno = @empno --PK, dus veilig om aan te nemen dat het een scalar is
 					) 
-		IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND EXISTS (
+		IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND NOT EXISTS (
 			-- Wordt een president of manager, check of er nog een (andere, mag niet zich zelf zijn met zijn oude job) admin is
 			SELECT *
 				FROM emp
 				WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno
 			)
+		
 			THROW 50001, 'Er is geen admin in deze afdeling', 1
 		IF EXISTS (
 			-- Emp die geupdate wordt is een admin, dus als er een President of Manager werkt EN het de laatste admin is in de afdeling, tegenhouden
@@ -118,7 +119,6 @@ BEGIN
 	END CATCH
 END
 GO
-
 
 /*******************************************************************************************
 	3.	The company hires adult personnel only.

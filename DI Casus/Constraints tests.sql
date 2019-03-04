@@ -69,10 +69,27 @@ GO
 EXEC tSQLt.NewTestClass 'testAdminInEveryDeptAPresidentOrManagerWorks'
 
 GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.emp'
+	SELECT *
+		INTO expected
+		FROM dbo.emp
+END
+GO
+
+GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithoutAdmin
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50001
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'PRESIDENT'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -80,7 +97,14 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithAdmin
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectNoException
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'PRESIDENT'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -88,7 +112,13 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithoutAdmin
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50001
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'MANAGER'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -96,7 +126,44 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithAdmin
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectNoException
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'MANAGER'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOtherWithManager
+AS
+BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50002
+
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOtherWithPresident
+AS
+BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50002
+
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -104,7 +171,29 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOther
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectNoException
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOtherWithPresident
+AS
+BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectNoException
+
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -112,7 +201,30 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOther
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectNoException
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOtherWithManager
+AS
+BEGIN
+	INSERT INTO dbo.emp VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectNoException
+
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -120,7 +232,13 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToPresident
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (2, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50001
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'PRESIDENT'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -128,7 +246,13 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToManager
 AS
 BEGIN
+	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (2, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50001
 
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'MANAGER'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 /*******************************************************************************************
