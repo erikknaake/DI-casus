@@ -57,7 +57,7 @@ ROLLBACK TRANSACTION
 	Kan misgaan als:
 	Als een president/manager wordt geinsert in emp OF
 
-	Als in emp de job van een medewerker naar president/mamanger wordt geupdate 
+	Als in emp de job van een medewerker naar president/manager wordt geupdate 
 	en er geen administrator in de afdeling is of de geupdate medewerker de laatste administrator van de afdeling was OF
 
 	Als in emp de laatste administrator van een afdeling wordt geupdatet naar een andere job OF
@@ -74,7 +74,7 @@ ROLLBACK TRANSACTION
 	en er rekening gehouden moet worden dat de medewerker ook zelf de laatste administrator van een afdeling kan zijn
 *******************************************************************************************/
 GO
-CREATE PROC usp_UpdateEmpJob
+CREATE OR ALTER PROC usp_UpdateEmpJob
 	(
 		@empno NUMERIC(4,0),
 		@job VARCHAR(9)

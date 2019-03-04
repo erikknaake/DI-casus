@@ -63,6 +63,75 @@ GO
 
 
 /*******************************************************************************************
+	Constraint 2
+	A department that employs the president or a manager should also employ at least one administrator.
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testAdminInEveryDeptAPresidentOrManagerWorks'
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithoutAdmin
+AS
+BEGIN
+
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithAdmin
+AS
+BEGIN
+
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithoutAdmin
+AS
+BEGIN
+
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithAdmin
+AS
+BEGIN
+
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOther
+AS
+BEGIN
+
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOther
+AS
+BEGIN
+
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToPresident
+AS
+BEGIN
+
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToManager
+AS
+BEGIN
+
+END
+GO
+/*******************************************************************************************
 	Run all tests
 *******************************************************************************************/
 EXEC tSQLt.RunAll
