@@ -57,7 +57,7 @@ ROLLBACK TRANSACTION
 	Kan misgaan als:
 	Als een president/manager wordt geinsert in emp OF
 
-	Als in emp de job van een medewerker naar president/mamanger wordt geupdate 
+	Als in emp de job van een medewerker naar president/manager wordt geupdate 
 	en er geen administrator in de afdeling is of de geupdate medewerker de laatste administrator van de afdeling was OF
 
 	Als in emp de laatste administrator van een afdeling wordt geupdatet naar een andere job OF
@@ -74,7 +74,7 @@ ROLLBACK TRANSACTION
 	en er rekening gehouden moet worden dat de medewerker ook zelf de laatste administrator van een afdeling kan zijn
 *******************************************************************************************/
 GO
-CREATE PROC usp_UpdateEmpJob
+CREATE OR ALTER PROC usp_UpdateEmpJob
 	(
 		@empno NUMERIC(4,0),
 		@job VARCHAR(9)
@@ -87,12 +87,13 @@ BEGIN
 							FROM emp
 							WHERE empno = @empno --PK, dus veilig om aan te nemen dat het een scalar is
 					) 
-		IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND EXISTS (
+		IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND NOT EXISTS (
 			-- Wordt een president of manager, check of er nog een (andere, mag niet zich zelf zijn met zijn oude job) admin is
 			SELECT *
 				FROM emp
 				WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno
 			)
+		
 			THROW 50001, 'Er is geen admin in deze afdeling', 1
 		IF EXISTS (
 			-- Emp die geupdate wordt is een admin, dus als er een President of Manager werkt EN het de laatste admin is in de afdeling, tegenhouden
@@ -118,7 +119,6 @@ BEGIN
 	END CATCH
 END
 GO
-
 
 /*******************************************************************************************
 	3.	The company hires adult personnel only.
