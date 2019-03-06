@@ -126,13 +126,15 @@ go
 
 	Update van grd waarbij de llimit lager wordt dan de llimit van een lagere grd
 	Update van grd waarbij de ulimit lager wordt dan de ulimit van een lagere grd
+
+	Gekozen voor een trigger omdat die met dezelfde code zowel voor inserts als updates kan werken
 *******************************************************************************************/
 GO
 CREATE OR ALTER TRIGGER utr_OverlappingSalaryGrades
 	ON grd
 	AFTER UPDATE, INSERT
 AS
-BEGIN --TODO: testbaar maken in het geval dat een rollback gaat plaats vinden door een throw (geeft 2 errors op verkeerde transactie management)
+BEGIN --TODO: testbaar maken in het geval dat een rollback gaat plaats vinden door een throw (geeft 2 errors op verkeerde transactie management bij verkeerde inserts)
 	BEGIN TRY
 		SET NOCOUNT ON
 		IF UPDATE(llimit) OR UPDATE(ulimit)
@@ -157,6 +159,7 @@ BEGIN --TODO: testbaar maken in het geval dat een rollback gaat plaats vinden do
 	END CATCH
 END
 GO
+
 /*******************************************************************************************
 	5.	The start date and known trainer uniquely identify course offerings. 
 	Note: the use of a filtered index is not allowed.
