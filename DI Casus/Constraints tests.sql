@@ -16,6 +16,7 @@ END
 
 
 /*******************************************************************************************
+	Constraint 1
 	President salary
 *******************************************************************************************/
 
@@ -38,29 +39,6 @@ BEGIN
 	INSERT INTO emp VALUES (NULL, NULL, 'PRESIDENT', NULL, NULL, NULL, 10000, NULL, NULL)
 END
 GO
-
-
-/*******************************************************************************************
-	All employees should be age 18 or older
-*******************************************************************************************/
-CREATE OR ALTER PROC testEmps.testEmpAge18OrHigherInvalidCase
-AS
-BEGIN
-	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_employee_age'
-	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547 -- A check constraint should be violated
-	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -17, GETDATE()), NULL, NULL, NULL, NULL, NULL)
-END
-GO
-
-CREATE OR ALTER PROC testEmps.testEmpAge18OrHigherValidCase
-AS
-BEGIN
-	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_employee_age'
-	EXEC tSQLt.ExpectNoException
-	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -18, GETDATE()), NULL, NULL, NULL, NULL, NULL)
-END
-GO
-
 
 /*******************************************************************************************
 	Constraint 2
@@ -255,6 +233,171 @@ BEGIN
 	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
+
+/*******************************************************************************************
+	Constraint 3
+	All employees should be age 18 or older
+*******************************************************************************************/
+CREATE OR ALTER PROC testEmps.testEmpAge18OrHigherInvalidCase
+AS
+BEGIN
+	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_employee_age'
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547 -- A check constraint should be violated
+	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -17, GETDATE()), NULL, NULL, NULL, NULL, NULL)
+END
+GO
+
+CREATE OR ALTER PROC testEmps.testEmpAge18OrHigherValidCase
+AS
+BEGIN
+	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_employee_age'
+	EXEC tSQLt.ExpectNoException
+	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -18, GETDATE()), NULL, NULL, NULL, NULL, NULL)
+END
+GO
+
+/*******************************************************************************************
+	Constraint 4
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testSalaryGradesCantOverlap'
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.grd'
+	EXEC tSQLt.ApplyTrigger 'dbo.grd', 'dbo.utr_OverlappingSalaryGrades'
+	SELECT *
+		INTO expected
+		FROM dbo.grd
+END
+GO
+
+-- Er wordt wel gethrowd, maar omdat de transactie wordt terug gedraaid gaat tSQLt over zijn nek
+--GO
+--CREATE OR ALTER PROC testSalaryGradesCantOverlap.testInsertWithWrongLowerLimit
+--AS
+--BEGIN
+--	INSERT INTO grd VALUES (1, 10, 20, NULL)
+--	INSERT INTO expected VALUES (1, 10, 20, NULL)
+--	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50003
+
+--	INSERT INTO grd VALUES (2, 9, 20, NULL)
+
+--	EXEC tSQLt.AssertEqualsTable expected, grd
+--END
+--GO
+
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testInsertWithCorrectLowerLimit
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO grd VALUES (2, 11, 20, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+-- Er wordt wel gethrowd, maar omdat de transactie wordt terug gedraaid gaat tSQLt over zijn nek
+--GO
+--CREATE OR ALTER PROC testSalaryGradesCantOverlap.testInsertWithWrongUpperLimit
+--AS
+--BEGIN
+--	INSERT INTO grd VALUES (1, 10, 20, NULL)
+--	INSERT INTO expected VALUES (1, 10, 20, NULL)
+--	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50003
+
+--	INSERT INTO grd VALUES (2, 10, 19, NULL)
+
+--	EXEC tSQLt.AssertEqualsTable expected, grd
+--END
+--GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testInsertWithCorrectUpperLimit
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO grd VALUES (2, 10, 21, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithWrongLowerLimit
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50003
+
+	UPDATE grd
+		SET llimit = 9
+		WHERE grade = 2
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithCorrectLowerLimit
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 12, 20, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	UPDATE grd
+		SET llimit = 12
+		WHERE grade = 2
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithWrongUpperLimit
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50003
+
+	UPDATE grd
+		SET ulimit = 19
+		WHERE grade = 2
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithCorrectUpperLimit
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 22, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	UPDATE grd
+		SET ulimit = 22
+		WHERE grade = 2
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+
 /*******************************************************************************************
 	Run all tests
 *******************************************************************************************/

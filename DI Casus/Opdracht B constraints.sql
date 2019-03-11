@@ -22,23 +22,6 @@ ALTER TABLE emp
 	CHECK (job <> 'PRESIDENT' OR msal >= 10000)
 go
 
---Tests
-BEGIN TRANSACTION
--- Should succeed, "is president		earns >= 10k	OK"
-INSERT INTO emp (empno, ename, job, born, hired, sgrade, msal, username, deptno) VALUES (9990, 'Test', 'PRESIDENT', '11-feb-2000', '30-jun-2008', 11, 10000, 'Test_Subject', 10)
-
--- Should fail, "is president		earns < 10k		NOT OK"
-INSERT INTO emp (empno, ename, job, born, hired, sgrade, msal, username, deptno) VALUES (9991, 'Test', 'PRESIDENT', '11-feb-2000', '30-jun-2008', 11, 9999, 'TestSubject1', 10)
-
--- Should succeed, "is not president	earns >= 10k	OK"
-INSERT INTO emp (empno, ename, job, born, hired, sgrade, msal, username, deptno) VALUES (9992, 'Test', 'ADMIN', '11-feb-2000', '30-jun-2008', 11, 10000, 'TestSubject2', 10)
-
--- Should succeed, "is not president	earns < 10k		OK"
-INSERT INTO emp (empno, ename, job, born, hired, sgrade, msal, username, deptno) VALUES (9993, 'Test', 'ADMIN', '11-feb-2000', '30-jun-2008', 11, 9999, 'TestSubject3', 10)
-ROLLBACK TRANSACTION
-
-
-
 
 /*******************************************************************************************
 	2.	A department that employs the president or a manager should also employ at least one administrator.
@@ -130,23 +113,52 @@ ALTER TABLE emp
 	CHECK (DATEADD(YEAR, 18, born) < GETDATE())
 go
 
--- Tests
-BEGIN TRANSACTION
--- Should fail, age < 18
-INSERT INTO emp (empno, ename, job, born, hired, sgrade, msal, username, deptno) VALUES (9993, 'Test', 'ADMIN', '11-feb-2004', '30-jun-2008', 11, 9999, 'TestSubject4', 10)
-
--- Should succeed, age >= 18
-INSERT INTO emp (empno, ename, job, born, hired, sgrade, msal, username, deptno) VALUES (9994, 'Test', 'ADMIN', '11-feb-2000', '30-jun-2008', 11, 9999, 'TestSubject5', 10)
-ROLLBACK TRANSACTION
-
 
 /*******************************************************************************************
 	4.	A salary grade overlaps with at most one lower salary grade. 
 	The llimit of a salary grade must be higher than the llimit of the next lower salary grade. 
-	The ulimit of the salary grade must be higher than the ulimit of the next lower salary grade.
-*******************************************************************************************/
--- TODO: procedure 2
+	The ulimit of the salary grade must be higher than the ulimit of the next lower salary grade. TODO: valideren of next lower salary grade inderdaad op grade slaat
 
+	Kan misgaan bij:
+
+	Insert in grd waarbij de llimit lager is dan de llimit van een lagere grd
+	Insert in grd waarbij de ulimit lager is dan de ulimit van een lagere grd
+
+	Update van grd waarbij de llimit lager wordt dan de llimit van een lagere grd
+	Update van grd waarbij de ulimit lager wordt dan de ulimit van een lagere grd
+
+	Gekozen voor een trigger omdat die met dezelfde code zowel voor inserts als updates kan werken
+*******************************************************************************************/
+GO
+CREATE OR ALTER TRIGGER utr_OverlappingSalaryGrades
+	ON grd
+	AFTER UPDATE, INSERT
+AS
+BEGIN --TODO: testbaar maken in het geval dat een rollback gaat plaats vinden door een throw (geeft 2 errors op verkeerde transactie management bij verkeerde inserts)
+	BEGIN TRY
+		SET NOCOUNT ON
+		IF UPDATE(llimit) OR UPDATE(ulimit)
+		BEGIN
+			IF EXISTS (
+				SELECT *
+					FROM inserted i
+					WHERE EXISTS (
+						SELECT *
+							FROM grd g
+							WHERE g.grade < i.grade AND (
+								i.llimit < g.llimit OR
+								i.ulimit < g.ulimit
+							)
+					)
+				)
+				THROW 50003, 'Salary grades kunnen niet overlappen', 1
+		END
+	END TRY
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
 
 /*******************************************************************************************
 	5.	The start date and known trainer uniquely identify course offerings. 
