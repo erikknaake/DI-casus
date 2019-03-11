@@ -399,6 +399,108 @@ GO
 
 
 /*******************************************************************************************
+	Constraint 5
+	The start date and known trainer uniquely identify course offerings. 
+	Note: the use of a filtered index is not allowed.
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testOffrIsUniqueByTrainerAndStarts'
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.ApplyConstraint 'dbo.offr', 'ofr_unq'
+	SELECT *
+		INTO expected
+		FROM dbo.offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testNormalInsert
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), (NULL, '24-DEC-2019', NULL, NULL, 2, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES (NULL, '24-DEC-2019', NULL, NULL, 2, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameDate
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), (NULL, '23-DEC-2019', NULL, NULL, 2, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 2, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameTrainer
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), (NULL, '24-DEC-2019', NULL, NULL, 1, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES (NULL, '24-DEC-2019', NULL, NULL, 1, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameTrainerSameDate
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 2627
+
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameTrainerNull
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL), (NULL, '24-DEC-2019', NULL, NULL, NULL, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES (NULL, '24-DEC-2019', NULL, NULL, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameTrainerSameDateWithNullTrainer
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 2627
+
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+/*******************************************************************************************
 	Run all tests
 *******************************************************************************************/
 EXEC tSQLt.RunAll

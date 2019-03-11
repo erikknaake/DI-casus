@@ -164,8 +164,8 @@ GO
 	5.	The start date and known trainer uniquely identify course offerings. 
 	Note: the use of a filtered index is not allowed.
 *******************************************************************************************/
---TODO: is unique over 2 kollomen toegestaan?
-
+-- Dit is in het COURSE_constraint.sql bestand al gedaan onder de constraint: ofr_unq.
+-- Er staat hier een fout in het powerdesigner schema, starts is wel in de ak opgenomen, maar de trainer niet
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
