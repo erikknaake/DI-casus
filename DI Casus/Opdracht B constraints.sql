@@ -168,5 +168,47 @@ GO
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
+	De starts van de nieuwe offr mag niet liggen binenn de starts + dur (crs) van een andere course. 
+
+	Kan misgaan als:
+
+	Nieuwe insert wordt gedaan in offr en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
+	Nieuwe insert wordt gedaan en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
+
+	Bij een update van de starts in offr waardoor deze in een andere offr komt te liggen.
+	Bij een update van de duration van een crs waardoor deze komt te vallen binnen de duur van een andere crs
+
 *******************************************************************************************/
--- Procedure 3
+GO
+CREATE OR ALTER TRIGGER utr_OverlappingCourseOfferings
+	ON offr
+	AFTER INSERT, UPDATE
+AS
+BEGIN
+	SET NOCOUNT ON
+	SET XACT_ABORT OFF
+
+	DECLARE @TranCount INT = @@TRANCOUNT
+	IF @TranCount > 0
+		SAVE TRAN ProcedureSave
+	ELSE
+		BEGIN TRAN
+
+	BEGIN TRY
+
+		-- Check met throw als het verkeerd gaat
+
+
+		-- Commit als het goed gaat
+		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
+	END TRY
+
+	BEGIN CATCH
+		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
+		ELSE
+			BEGIN
+				IF XACT_STATE() <> -1 ROLLBACK TRAN ProcedureSave
+			END;
+		THROW
+	END CATCH
+END
