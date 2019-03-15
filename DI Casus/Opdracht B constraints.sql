@@ -170,16 +170,21 @@ GO
 	6.	Trainers cannot teach different courses simultaneously.
 	De starts + dur van de nieuwe offr mogen niet vallen binnen andere al gegeven offrs.
 
+	Conditie A: StartA > EndB
+	Conditie B: EndA < StartB
+	Er is overlap als geen van beide waar is
+
 	Kan misgaan als:
 
-	Nieuwe insert wordt gedaan in offr en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
-	Nieuwe insert wordt gedaan en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
+	Nieuwe insert wordt gedaan in offr, en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
+	Nieuwe insert wordt gedaan in offr, en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
 
-	Bij een update van de starts in offr waardoor deze in een andere offr komt te liggen.
+	Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
+	
 	Bij een update van de duration van een crs waardoor deze komt te vallen binnen de duur van een andere crs
 
 *******************************************************************************************/
-/* GO
+GO
 CREATE OR ALTER TRIGGER utr_OverlappingCourseOfferings
 	ON offr
 	AFTER INSERT, UPDATE
@@ -195,11 +200,28 @@ BEGIN
 		BEGIN TRAN
 
 	BEGIN TRY
+		IF (UPDATE(starts))
+		BEGIN
+			IF exists (	
+				SELECT *
+				FROM inserted I
+				WHERE exists (
+					SELECT *
+					FROM offr O
+					WHERE (O.trainer = I.trainer) AND (
+						(I.starts <= DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = O.course), O.starts))
+						AND
+						(DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = I.course), I.starts) >= O.starts)	
+					)
+					EXCEPT
+					SELECT *
+					FROM offr O
+					WHERE O.course = I.course AND O.starts = I.starts
+				)								
+			)
+			THROW 50061, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
+		END
 
-		-- Check met throw als het verkeerd gaat
-		
-
-		-- Commit als het goed gaat
 		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
 	END TRY
 
@@ -212,52 +234,4 @@ BEGIN
 		THROW
 	END CATCH
 END
-GO */
-
 GO
-CREATE OR ALTER PROC ups_InsertNewOffr
-	(
-		@course varchar(6),
-		@starts date,
-		@status varchar(4),
-		@maxcap numeric(2),
-		@trainer numeric(4),
-		@loc varchar(14)
-	)
-AS
-BEGIN
-	SET NOCOUNT ON
-	SET XACT_ABORT OFF
-
-	DECLARE @TranCount INT = @@TRANCOUNT
-	IF @TranCount > 0
-		SAVE TRAN ProcedureSave
-	ELSE
-		BEGIN TRAN
-
-	BEGIN TRY
-		if exists (
-			select * 
-			from offr O
-			where (trainer = @trainer) and (
-				(@starts <= DATEADD(day, (select dur from crs where code = O.course), O.starts))
-				and
-				(O.starts <= DATEADD(day, (select dur from crs where code = @course), @starts))		
-			)										
-		) 
-		throw 50601, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
-
-		insert into offr values (@course, @starts, @status, @maxcap, @trainer, @loc)
-
-		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
-	END TRY
-
-	BEGIN CATCH
-		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
-		ELSE
-			BEGIN
-				IF XACT_STATE() <> -1 ROLLBACK TRAN ProcedureSave
-			END;
-		THROW
-	END CATCH
-END
