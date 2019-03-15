@@ -134,7 +134,7 @@ CREATE OR ALTER TRIGGER utr_OverlappingSalaryGrades
 	ON grd
 	AFTER UPDATE, INSERT
 AS
-BEGIN --TODO: testbaar maken in het geval dat een rollback gaat plaats vinden door een throw (geeft 2 errors op verkeerde transactie management bij verkeerde inserts)
+BEGIN 
 	BEGIN TRY
 		SET NOCOUNT ON
 		IF UPDATE(llimit) OR UPDATE(ulimit)
@@ -165,7 +165,6 @@ GO
 	Note: the use of a filtered index is not allowed.
 *******************************************************************************************/
 -- Dit is in het COURSE_constraint.sql bestand al gedaan onder de constraint: ofr_unq.
--- Er staat hier een fout in het powerdesigner schema, starts is wel in de ak opgenomen, maar de trainer niet
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
