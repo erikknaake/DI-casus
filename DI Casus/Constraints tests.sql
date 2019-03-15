@@ -500,6 +500,79 @@ BEGIN
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
+
+/*******************************************************************************************
+	Constraint 6
+	Trainers cannot teach different courses simultaneously. 
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testCourseOfferingsCantOverlap'
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.ApplyTrigger 'dbo.offr', 'dbo.utr_OverlappingCourseOfferings'
+	SELECT *
+		INTO expected
+		FROM dbo.grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileEndWillSurpassStartOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-06', 'CONF', 6, 1016, 'SAN FRANSISCO')
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileStartsIsLessThenEndOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	INSERT INTO offr VALUES ('APEX', '2006-10-10', 'CONF', 6, 1016, 'SAN FRANSISCO')
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoEndWillSurpassStartOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', 'CONF', 6, 1016, 'SAN FRANSISCO')
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	UPDATE offr
+		SET starts = '2006-10-09'
+		WHERE course = 'AM4DP' and starts ='2006-10-08'
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoStartsIsLessThenEndOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', 'CONF', 6, 1016, 'SAN FRANSISCO')
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	UPDATE offr
+		SET starts = '2006-10-17'
+		WHERE course = 'PLSQL' and starts ='2006-10-18'
+END
+GO
+
 /*******************************************************************************************
 	Run all tests
 *******************************************************************************************/
