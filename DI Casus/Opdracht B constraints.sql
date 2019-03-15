@@ -170,3 +170,62 @@ GO
 	6.	Trainers cannot teach different courses simultaneously.
 *******************************************************************************************/
 -- Procedure 3
+
+
+/*******************************************************************************************
+	7.	An active employee cannot be managed by a terminated employee. 
+
+	Kan misgaan bij:
+	- Een update in memp waarbij de mgr naar een empno wordt gezet die in term staat
+	- Een insert in memp waarbij de mgr een empno is van een term
+	- Een insert in term waarbij de empno een mgr is in memp
+	- Een update in term waarbij de empno naar een mgr in memp wordt gezet
+
+	Gekozen voor een stored procedure voor het terminaten van een employee (insert in term), 
+	omdat dit een voor de handliggende actie is en
+	zodat er een default leftcomp date wordt ingevuld en een trigger geen voordelen heeft
+*******************************************************************************************/
+GO
+CREATE OR ALTER PROC usp_TerminateEmp
+	(
+		@empno NUMERIC(4),
+		@comments VARCHAR(60),
+		@leftComp DATE = GETDATE
+	)
+AS
+BEGIN
+	SET NOCOUNT ON
+	SET XACT_ABORT OFF
+	DECLARE @TranCount INT = @@TRANCOUNT
+	IF @TranCount > 0
+		SAVE TRAN ProcedureSave
+	ELSE
+		BEGIN TRAN
+	BEGIN TRY
+
+		IF EXISTS (
+				SELECT *
+					FROM memp m
+					WHERE m.mgr = @empno
+					AND NOT EXISTS (
+						SELECT *
+							FROM term t
+							WHERE m.empno = t.empno
+					)
+			)
+			THROW 50006, 'Deze employee is nog een manager van een actieve employee', 1
+
+		INSERT INTO term (empno, leftcomp, comments) VALUES (@empno, @leftComp, @comments)
+
+		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
+	END TRY
+	BEGIN CATCH
+		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
+		ELSE
+			BEGIN
+				IF XACT_STATE() <> -1 ROLLBACK TRAN ProcedureSave
+			END;
+		THROW
+	END CATCH
+END
+GO
