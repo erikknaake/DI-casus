@@ -500,6 +500,71 @@ BEGIN
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
+
+
+/*******************************************************************************************
+	Constraint 7
+	An active employee cannot be managed by a terminated employee.
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testTermEmpNotManagingActiveEmp'
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.term'
+	EXEC tSQLt.FakeTable 'dbo.memp'
+	EXEC tSQLt.FakeTable 'dbo.emp'
+	SELECT *
+		INTO expected
+		FROM dbo.term
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testNormalTerm
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO memp VALUES (1, 2)
+	INSERT INTO expected VALUES (1, NULL, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	EXEC dbo.usp_TerminateEmp 1, NULL, NULL
+
+	EXEC tSQLt.AssertEqualsTable expected, term
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testTermOfManagerWithActiveEmp
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO memp VALUES (2, 1)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50006
+
+	EXEC dbo.usp_TerminateEmp 1, NULL, NULL
+
+	EXEC tSQLt.AssertEqualsTable expected, term
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testTermOfManagerWithInactiveEmp
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO memp VALUES (1, 2)
+	INSERT INTO term VALUES (1, NULL, NULL)
+	INSERT INTO expected VALUES (1, NULL, NULL), (2, NULL, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	EXEC dbo.usp_TerminateEmp 2, NULL, NULL
+
+	EXEC tSQLt.AssertEqualsTable expected, term
+END
+GO
 /*******************************************************************************************
 	Run all tests
 *******************************************************************************************/
