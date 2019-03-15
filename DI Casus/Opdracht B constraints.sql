@@ -168,7 +168,7 @@ GO
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
-	De starts van de nieuwe offr mag niet liggen binenn de starts + dur (crs) van een andere course. 
+	De starts + dur van de nieuwe offr mogen niet vallen binnen andere al gegeven offrs.
 
 	Kan misgaan als:
 
@@ -179,10 +179,51 @@ GO
 	Bij een update van de duration van een crs waardoor deze komt te vallen binnen de duur van een andere crs
 
 *******************************************************************************************/
-GO
+/* GO
 CREATE OR ALTER TRIGGER utr_OverlappingCourseOfferings
 	ON offr
 	AFTER INSERT, UPDATE
+AS
+BEGIN
+	SET NOCOUNT ON
+	SET XACT_ABORT OFF
+
+	DECLARE @TranCount INT = @@TRANCOUNT
+	IF @TranCount > 0
+		SAVE TRAN TriggerSave
+	ELSE
+		BEGIN TRAN
+
+	BEGIN TRY
+
+		-- Check met throw als het verkeerd gaat
+		
+
+		-- Commit als het goed gaat
+		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
+	END TRY
+
+	BEGIN CATCH
+		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
+		ELSE
+			BEGIN
+				IF XACT_STATE() <> -1 ROLLBACK TRAN TriggerSave
+			END;
+		THROW
+	END CATCH
+END
+GO */
+
+GO
+CREATE OR ALTER PROC ups_InsertNewOffr
+	(
+		@course varchar(6),
+		@starts date,
+		@status varchar(4),
+		@maxcap numeric(2),
+		@trainer numeric(4),
+		@loc varchar(14)
+	)
 AS
 BEGIN
 	SET NOCOUNT ON
@@ -195,11 +236,19 @@ BEGIN
 		BEGIN TRAN
 
 	BEGIN TRY
+		if exists (
+			select * 
+			from offr O
+			where (trainer = @trainer) and (
+				(@starts <= DATEADD(day, (select dur from crs where code = O.course), O.starts))
+				and
+				(O.starts <= DATEADD(day, (select dur from crs where code = @course), @starts))		
+			)										
+		) 
+		throw 50601, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
 
-		-- Check met throw als het verkeerd gaat
+		insert into offr values (@course, @starts, @status, @maxcap, @trainer, @loc)
 
-
-		-- Commit als het goed gaat
 		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
 	END TRY
 
