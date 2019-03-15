@@ -181,6 +181,7 @@ GO
 
 	Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
 	
+	-- Een update op de tabel crs kan niet worden getest binnen deze trigger
 	Bij een update van de duration van een crs waardoor deze komt te vallen binnen de duur van een andere crs
 
 *******************************************************************************************/
