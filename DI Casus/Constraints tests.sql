@@ -519,9 +519,6 @@ BEGIN
 END
 GO
 
-select * from offr
-order by trainer, starts
-
 GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWithoutErrors
 AS
