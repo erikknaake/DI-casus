@@ -160,11 +160,13 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	5.	The start date and known trainer uniquely identify course offerings. 
 	Note: the use of a filtered index is not allowed.
 *******************************************************************************************/
 -- Dit is in het COURSE_constraint.sql bestand al gedaan onder de constraint: ofr_unq.
+
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
@@ -224,6 +226,60 @@ BEGIN
 		ELSE
 			BEGIN
 				IF XACT_STATE() <> -1 ROLLBACK TRAN ProcedureSave
+			END;
+		THROW
+	END CATCH
+END
+GO
+
+
+/*******************************************************************************************
+	8.	A trainer cannot register for a course offering taught by him- or herself. 
+
+	reg.stud mag niet gelijk zijn aan offr.trainer waar de course en starts gelijk aan elkaar zijn.
+
+	Kan misgaan bij:
+	- Een insert in reg waarbij de stud gelijk is aan de trainer van die course
+	- Een update in reg zodat de stud gelijk wordt aan de trainer van die course
+	- Een update in offr waardoor de trainer van gelijk wordt aan een geregistreerde employee
+
+	Er is gekozen voor een stored procedure om een insert in de reg tabel te voorkomen,
+	omdat dit een voor de hand liggende situatie is.
+	
+*******************************************************************************************/
+GO
+CREATE OR ALTER PROC usp_InsertNewReg
+	(
+		@stud numeric(4),
+		@course varchar(6),
+		@starts date,
+		@eval numeric(1)
+	)
+AS
+BEGIN
+	SET NOCOUNT ON
+	SET XACT_ABORT OFF
+
+	DECLARE @TranCount INT = @@TRANCOUNT
+	IF @TranCount > 0
+		SAVE TRAN InsertNewReg
+	ELSE
+		BEGIN TRAN
+
+	BEGIN TRY
+		-- check, als fout error
+		
+		THROW 50081, 'Er mag niet geregistreerd worden op een course offering dat gegeven wordt door dezelfde employee', 1
+
+		-- insert als het goed gaat
+
+		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
+	END TRY
+	BEGIN CATCH
+		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
+		ELSE
+			BEGIN
+				IF XACT_STATE() <> -1 ROLLBACK TRAN InsertNewReg
 			END;
 		THROW
 	END CATCH
