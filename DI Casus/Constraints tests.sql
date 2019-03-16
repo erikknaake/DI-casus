@@ -515,7 +515,25 @@ BEGIN
 	EXEC tSQLt.ApplyTrigger 'dbo.offr', 'dbo.utr_OverlappingCourseOfferings'
 	SELECT *
 		INTO expected
-		FROM dbo.grd
+		FROM dbo.offr
+END
+GO
+
+select * from offr
+order by trainer, starts
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWithoutErrors
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL), ('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES ('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -523,11 +541,11 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileEndWillSurpassStartOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
 
-	INSERT INTO offr VALUES ('AM4DP', '2006-10-06', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-06', NULL, NULL, 1016, NULL)
 END
 GO
 
@@ -535,11 +553,11 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileStartsIsLessThenEndOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
 
-	INSERT INTO offr VALUES ('APEX', '2006-10-10', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('APEX', '2006-10-10', NULL, NULL, 1016, NULL)
 END
 GO
 
@@ -547,14 +565,14 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoEndWillSurpassStartOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
 
 	UPDATE offr
 		SET starts = '2006-10-09'
-		WHERE course = 'AM4DP' and starts ='2006-10-08'
+		WHERE course = 'AM4DP' AND starts ='2006-10-08'
 END
 GO
 
@@ -562,14 +580,14 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoStartsIsLessThenEndOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', 'CONF', 6, 1016, 'SAN FRANSISCO')
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', 'CONF', 6, 1016, 'SAN FRANSISCO')
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
 
 	UPDATE offr
 		SET starts = '2006-10-17'
-		WHERE course = 'PLSQL' and starts ='2006-10-18'
+		WHERE course = 'PLSQL' AND starts ='2006-10-18'
 END
 GO
 

@@ -181,8 +181,8 @@ GO
 
 	Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
 	
-	-- Een update op de tabel crs kan niet worden getest binnen deze trigger
-	Bij een update van de duration van een crs waardoor deze komt te vallen binnen de duur van een andere crs
+	-- Deze trigger handeld geen inserts of deletes af binnen de crs tabel, daarom hier niet aan voldaan worden
+	Bij een update van de duur van een course in de crs tabel waardoor deze komt te vallen binnen de duur van een andere offer
 
 *******************************************************************************************/
 GO
@@ -192,13 +192,6 @@ CREATE OR ALTER TRIGGER utr_OverlappingCourseOfferings
 AS
 BEGIN
 	SET NOCOUNT ON
-	SET XACT_ABORT OFF
-
-	DECLARE @TranCount INT = @@TRANCOUNT
-	IF @TranCount > 0
-		SAVE TRAN TriggerSave
-	ELSE
-		BEGIN TRAN
 
 	BEGIN TRY
 		IF (UPDATE(starts))
@@ -210,28 +203,19 @@ BEGIN
 					SELECT *
 					FROM offr O
 					WHERE (O.trainer = I.trainer) AND (
+						-- StartA <= EndB
 						(I.starts <= DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = O.course), O.starts))
 						AND
+						-- EndA >= StartB
 						(DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = I.course), I.starts) >= O.starts)	
-					)
-					EXCEPT
-					SELECT *
-					FROM offr O
-					WHERE O.course = I.course AND O.starts = I.starts
+					) AND (O.course <> I.course AND O.starts <> I.starts)
 				)								
 			)
 			THROW 50061, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
 		END
-
-		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
 	END TRY
 
 	BEGIN CATCH
-		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
-		ELSE
-			BEGIN
-				IF XACT_STATE() <> -1 ROLLBACK TRAN TriggerSave
-			END;
 		THROW
 	END CATCH
 END
