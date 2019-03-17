@@ -704,6 +704,106 @@ BEGIN
 END
 GO
 
+
+/*******************************************************************************************
+	Constraint 11
+	11.	You are allowed to teach a course only if:
+		your job type is trainer and
+		-      you have been employed for at least one year 
+		-	or you have attended the course yourself (as participant) 
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testTeacherRequirements'
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.emp'
+	EXEC tSQLt.FakeTable 'dbo.reg'
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.FakeTable 'dbo.crs'
+	SELECT *
+		INTO expected
+		FROM dbo.offr
+	INSERT INTO emp VALUES (1, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL), 
+		(2, NULL, 'SALESREP', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
+		(3, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
+		(4, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
+		(5, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL)
+	INSERT INTO reg VALUES (4, 'DMDD', NULL, NULL), (3, 'DI', NULL, NULL), (5, 'DI', NULL, NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerEmployedFor1YearAndHadCourse
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+
+	INSERT INTO expected VALUES ('DI', @date, 'CONF', 2, 5, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+
+	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 5, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerEmployedFor1YearAndNotHadCourse
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+
+	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 5, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+
+	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 5, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerNotEmployedFor1YearHadCourse
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+
+	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 4, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+
+	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 4, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerNotHadCourseAndNotEmployedFor1Year
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50111
+
+	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 4, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testNotATrainer
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50110
+
+	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 2, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
 /*******************************************************************************************
 	Run all tests
 *******************************************************************************************/
