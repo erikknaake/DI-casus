@@ -612,6 +612,8 @@ BEGIN
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50081
 
 	EXEC usp_InsertNewReg 1, 1016, '2006-10-07', null
+
+	EXEC tSQLt.AssertEqualsTable expected, reg
 END
 GO
 
