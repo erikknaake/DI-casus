@@ -267,11 +267,14 @@ BEGIN
 		BEGIN TRAN
 
 	BEGIN TRY
-		-- check, als fout error
-		
+		IF EXISTS (
+			SELECT *
+			FROM offr
+			WHERE trainer = @stud AND (course = @course AND starts = @starts)
+		)
 		THROW 50081, 'Er mag niet geregistreerd worden op een course offering dat gegeven wordt door dezelfde employee', 1
 
-		-- insert als het goed gaat
+		INSERT INTO reg VALUES (@stud, @course, @starts, @eval)
 
 		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
 	END TRY
