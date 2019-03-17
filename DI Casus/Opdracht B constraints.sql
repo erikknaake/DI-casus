@@ -170,8 +170,58 @@ GO
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
+	De starts + dur van de nieuwe offr mogen niet vallen binnen andere al gegeven offrs.
+
+	Conditie A: StartA > EndB
+	Conditie B: EndA < StartB
+	Er is overlap als geen van beide waar is
+
+	Kan misgaan als:
+
+	Nieuwe insert wordt gedaan in offr, en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
+	Nieuwe insert wordt gedaan in offr, en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
+
+	Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
+	
+	-- Deze trigger handeld geen inserts of deletes af binnen de crs tabel, daarom hier niet aan voldaan worden
+	Bij een update van de duur van een course in de crs tabel waardoor deze komt te vallen binnen de duur van een andere offer
+
 *******************************************************************************************/
--- Procedure 3
+GO
+CREATE OR ALTER TRIGGER utr_OverlappingCourseOfferings
+	ON offr
+	AFTER INSERT, UPDATE
+AS
+BEGIN
+	SET NOCOUNT ON
+
+	BEGIN TRY
+		IF (UPDATE(starts))
+		BEGIN
+			IF exists (	
+				SELECT *
+				FROM inserted I
+				WHERE exists (
+					SELECT *
+					FROM offr O
+					WHERE (O.trainer = I.trainer) AND (
+						-- StartA <= EndB
+						(I.starts <= DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = O.course), O.starts))
+						AND
+						-- EndA >= StartB
+						(DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = I.course), I.starts) >= O.starts)	
+					) AND (O.course <> I.course AND O.starts <> I.starts)
+				)								
+			)
+			THROW 50061, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
+		END
+	END TRY
+
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
 
 
 /*******************************************************************************************
