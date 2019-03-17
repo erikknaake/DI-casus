@@ -501,6 +501,7 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	Constraint 6
 	Trainers cannot teach different courses simultaneously. 
@@ -585,6 +586,121 @@ BEGIN
 	UPDATE offr
 		SET starts = '2006-10-17'
 		WHERE course = 'PLSQL' AND starts ='2006-10-18'
+END
+GO
+
+/*******************************************************************************************
+	Constraint 7
+	An active employee cannot be managed by a terminated employee.
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testTermEmpNotManagingActiveEmp'
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.term'
+	EXEC tSQLt.FakeTable 'dbo.memp'
+	EXEC tSQLt.FakeTable 'dbo.emp'
+	SELECT *
+		INTO expected
+		FROM dbo.term
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testNormalTerm
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO memp VALUES (1, 2)
+	INSERT INTO expected VALUES (1, NULL, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	EXEC dbo.usp_TerminateEmp 1, NULL, NULL
+
+	EXEC tSQLt.AssertEqualsTable expected, term
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testTermOfManagerWithActiveEmp
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO memp VALUES (2, 1)
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50006
+
+	EXEC dbo.usp_TerminateEmp 1, NULL, NULL
+
+	EXEC tSQLt.AssertEqualsTable expected, term
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testTermOfManagerWithInactiveEmp
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO memp VALUES (1, 2)
+	INSERT INTO term VALUES (1, NULL, NULL)
+	INSERT INTO expected VALUES (1, NULL, NULL), (2, NULL, NULL)
+	EXEC tSQLt.ExpectNoException
+
+	EXEC dbo.usp_TerminateEmp 2, NULL, NULL
+
+	EXEC tSQLt.AssertEqualsTable expected, term
+END
+GO
+
+
+/*******************************************************************************************
+	Constraint 8
+	A trainer cannot register for a course offering taught by him- or herself.
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testNotRegOnCourseTaughtBySameEmp'
+
+GO
+CREATE OR ALTER PROC testNotRegOnCourseTaughtBySameEmp.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.emp'
+	EXEC tSQLt.FakeTable 'dbo.reg'
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	SELECT *
+		INTO expected
+		FROM dbo.reg
+END
+GO
+
+GO
+CREATE OR ALTER PROC testNotRegOnCourseTaughtBySameEmp.testNormalInsert
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO offr VALUES (1016, '2006-10-07', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (2, 1016, '2006-10-07', NULL)
+	
+	EXEC tSQLt.ExpectNoException
+
+	EXEC usp_InsertNewReg 2, 1016, '2006-10-07', NULL
+
+	EXEC tSQLt.AssertEqualsTable expected, reg
+END
+GO
+
+GO
+CREATE OR ALTER PROC testNotRegOnCourseTaughtBySameEmp.testTermOfSameEmp
+AS
+BEGIN
+	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO offr VALUES (1016, '2006-10-07', null, null, 1, null)
+	
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50081
+
+	EXEC usp_InsertNewReg 1, 1016, '2006-10-07', null
+
+	EXEC tSQLt.AssertEqualsTable expected, reg
 END
 GO
 
