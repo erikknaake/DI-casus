@@ -793,6 +793,33 @@ BEGIN
 END
 GO
 
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testDoubleInsertToMakeOneOffrTurnCONF
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL),
+							('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+	INSERT INTO reg VALUES  (NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL),
+								('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
 /*******************************************************************************************
 	Run all tests
 *******************************************************************************************/

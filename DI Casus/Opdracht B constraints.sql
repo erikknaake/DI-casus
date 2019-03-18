@@ -358,28 +358,28 @@ GO
 GO
 CREATE OR ALTER TRIGGER utr_OfferingsStatusChange
 	ON reg
-	AFTER INSERT
+	AFTER INSERT, UPDATE
 AS
 BEGIN
 	SET NOCOUNT ON
 
 	BEGIN TRY
 		IF (UPDATE(course))
-		UPDATE offr
-		SET status = 'CONF'
-		WHERE course IN (
-			SELECT O.course
-			FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
-			WHERE O.status <> 'CONF'
-			GROUP BY O.course, O.starts
-			HAVING COUNT(*) >= 6
-		) AND starts IN (
-			SELECT O.starts
-			FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
-			WHERE O.status <> 'CONF'
-			GROUP BY O.course, O.starts
-			HAVING COUNT(*) >= 6
-		)
+			UPDATE offr
+			SET status = 'CONF'
+			WHERE course IN (
+				SELECT O.course
+				FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+				WHERE O.status <> 'CONF'
+				GROUP BY O.course, O.starts
+				HAVING COUNT(*) >= 6
+			) AND starts IN (
+				SELECT O.starts
+				FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+				WHERE O.status <> 'CONF'
+				GROUP BY O.course, O.starts
+				HAVING COUNT(*) >= 6
+			)
 	END TRY
 
 	BEGIN CATCH
