@@ -341,6 +341,52 @@ GO
 
 
 /*******************************************************************************************
+	9.	At least half of the course offerings (measured by duration) taught by a trainer must be ‘home based’. 
+	Note: ‘Home based’ means the course is offered at the same location where the employee is employed.
+
+	Kan misgaan bij:
+	- Update in crs waarbij de duration wordt veranderd
+	- Update in offr waarbij de trainer wordt veranderd en dus de course inneens home based of niet meer home based is
+	- Update in dept waarbij de locatie wordt aangepast en dus de course inneens home based of niet meer home based is
+	- Update in emp waardoor de trainer in een andere locatie komt te werken en dus de course inneens home based of niet meer home based is
+	- Insert in offr waardoor niet meer de helft van de offerings home based is
+	- Delete in offr waardoor niet meer de helft van de offerings home based is
+
+	Gekozen voor trigger op offr, omdat dezelfde code dan drie van de gevallen afdekt
+*******************************************************************************************/
+CREATE OR ALTER TRIGGER utr_HomeBasedOfferings
+	ON offr
+	AFTER UPDATE, INSERT
+AS
+BEGIN
+	SET NOCOUNT ON
+	BEGIN TRY
+		IF UPDATE (course) OR UPDATE (trainer) OR UPDATE (loc)
+		BEGIN
+			-- Vanwege performance gekozen om te kijken welke home based zijn en dan de helft van de totale duration op te halen
+			-- i.p.v te vergelijken met niet homebased
+			IF (SELECT IIF(homeBasedDur.dur < halfDur.dur, 1, 0)
+					FROM (
+						SELECT SUM(dur) as dur
+						FROM offr o INNER JOIN crs c ON o.course = c.code
+							INNER JOIN emp e ON o.trainer = e.empno
+							INNER JOIN dept d ON e.deptno = d.deptno
+						WHERE d.loc = o.loc
+					) as homeBasedDur, (
+						SELECT SUM(dur) / 2 as dur
+							FROM crs c INNER JOIN offr o ON c.code = o.course
+					) as halfDur
+				) = 1
+				THROW 50090, 'Ten minste de helft van de offerings moet home based zijn', 1
+		END
+	END TRY
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+
+
+/*******************************************************************************************
 	10.	Offerings with 6 or more registrations must have status confirmed. 
 
 	Wanneer er een insert of een update wordt gedaan in de registratie tabel
@@ -390,7 +436,6 @@ GO
 
 
 /*******************************************************************************************
-	Constraint 11
 	11.	You are allowed to teach a course only if:
 		- your job type is trainer and
 		- you have been employed for at least one year 

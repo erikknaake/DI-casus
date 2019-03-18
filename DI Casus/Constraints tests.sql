@@ -710,6 +710,112 @@ GO
 
 
 /*******************************************************************************************
+	Constraint 9
+	At least half of the course offerings (measured by duration) taught by a trainer must be ‘home based’.
+	Note: ‘Home based’ means the course is offered at the same location where the employee is employed.
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testAtLeastHalfHomeBasedOfferings'
+GO
+
+GO
+CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.emp'
+	EXEC tSQLt.FakeTable 'dbo.crs'
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.FakeTable 'dbo.dept'
+	EXEC tSQLt.ApplyTrigger 'dbo.offr', 'utr_HomeBasedOfferings'
+	SELECT *
+		INTO expected
+		FROM dbo.offr
+
+	INSERT INTO dbo.dept VALUES (1, NULL, 'Zutphen', NULL), (2, NULL, 'Arnhem', NULL)
+	INSERT INTO dbo.crs VALUES (1, NULL, NULL, 10), (2, NULL, NULL, 10), (3, NULL, NULL, 1)
+	INSERT INTO dbo.emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testInsertHalfHameBased
+AS
+BEGIN
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testInsertNotHalfHameBased
+AS
+BEGIN
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+	INSERT INTO offr VALUES (3, NULL, NULL, NULL, 1, 'Arnhem')
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateLocNotHalfHameBased
+AS
+BEGIN
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+	UPDATE offr
+		SET loc = 'Arnhem'
+		WHERE course = 3 AND trainer = 1
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateLocOrTrainerHalfHameBased --Niet mogelijk om dit scenario voor trainer en locatie los te testen
+AS
+BEGIN
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 2, 'Arnhem')
+	EXEC tSQLt.ExpectNoException
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+
+	UPDATE offr
+		SET loc = 'Arnhem', trainer = 2
+		WHERE course = 3 AND trainer = 1
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateTrainerNotHalfHameBased
+AS
+BEGIN
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+	UPDATE offr
+		SET trainer = 3
+		WHERE course = 3 AND trainer = 1
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+
+/*******************************************************************************************
 	Constraint 10
 	Offerings with 6 or more registrations must have status confirmed. 
 *******************************************************************************************/
@@ -819,10 +925,10 @@ GO
 
 /*******************************************************************************************
 	Constraint 11
-	11.	You are allowed to teach a course only if:
-		your job type is trainer and
-		-      you have been employed for at least one year 
-		-	or you have attended the course yourself (as participant) 
+	You are allowed to teach a course only if:
+	your job type is trainer and
+	-      you have been employed for at least one year 
+	-	or you have attended the course yourself (as participant) 
 *******************************************************************************************/
 EXEC tSQLt.NewTestClass 'testTeacherRequirements'
 
