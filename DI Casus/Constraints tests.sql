@@ -40,6 +40,7 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	Constraint 2
 	A department that employs the president or a manager should also employ at least one administrator.
@@ -234,6 +235,7 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	Constraint 3
 	All employees should be age 18 or older
@@ -255,6 +257,7 @@ BEGIN
 	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -18, GETDATE()), NULL, NULL, NULL, NULL, NULL)
 END
 GO
+
 
 /*******************************************************************************************
 	Constraint 4
@@ -589,6 +592,7 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	Constraint 7
 	An active employee cannot be managed by a terminated employee.
@@ -706,6 +710,114 @@ GO
 
 
 /*******************************************************************************************
+	Constraint 10
+	Offerings with 6 or more registrations must have status confirmed. 
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testCourseStatusChange'
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.FakeTable 'dbo.reg'
+	EXEC tSQLt.ApplyTrigger 'dbo.reg', 'dbo.utr_OfferingsStatusChange'
+	SELECT *
+		INTO expected
+		FROM dbo.offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testSingleInsertToMakeNoOffrChange
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testSingleInsertToMakeOffrTurnCONF
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testDoubleInsertToMakeOffrsTurnCONF
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL),
+							('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+	INSERT INTO reg VALUES  (NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL),
+								('SQL', '2008-10-08', 'CONF', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testDoubleInsertToMakeOneOffrTurnCONF
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL),
+							('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+	INSERT INTO reg VALUES  (NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL),
+								('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+END
+GO
+
+
+/*******************************************************************************************
 	Constraint 11
 	11.	You are allowed to teach a course only if:
 		your job type is trainer and
@@ -804,6 +916,8 @@ BEGIN
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
+
+
 /*******************************************************************************************
 	Run all tests
 *******************************************************************************************/
