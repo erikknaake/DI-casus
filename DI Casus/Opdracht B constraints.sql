@@ -338,3 +338,43 @@ BEGIN
 	END CATCH
 END
 GO
+
+
+/*******************************************************************************************
+	10.	Offerings with 6 or more registrations must have status confirmed. 
+
+
+	
+	
+*******************************************************************************************/
+GO
+CREATE OR ALTER TRIGGER utr_OfferingsStatusChange
+	ON reg
+	AFTER INSERT
+AS
+BEGIN
+	SET NOCOUNT ON
+
+	BEGIN TRY
+		UPDATE offr
+		SET status = 'CONF'
+		WHERE course IN (
+			SELECT O.course
+			FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+			WHERE O.status <> 'CONF'
+			GROUP BY O.course, O.starts
+			HAVING COUNT(*) >= 6
+		) AND starts IN (
+			SELECT O.starts
+			FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+			WHERE O.status <> 'CONF'
+			GROUP BY O.course, O.starts
+			HAVING COUNT(*) >= 6
+		)
+	END TRY
+
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
