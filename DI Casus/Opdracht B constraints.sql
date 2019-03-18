@@ -387,3 +387,78 @@ BEGIN
 	END CATCH
 END
 GO
+
+
+/*******************************************************************************************
+	Constraint 11
+	11.	You are allowed to teach a course only if:
+		- your job type is trainer and
+		- you have been employed for at least one year 
+		- or you have attended the course yourself (as participant) 
+
+	Uitgegaan van job = 'TRAINER' AND (employed > 1 year OR attended course)
+
+	Kan misgaan bij:
+	- Update van emp waarbij de job wordt veranderd naar iets anders dan trainer
+	- Update van emp waarbij de hiredDate naar voren wordt gezet
+	- Delete van reg waarbij de gedelete record van een (nu) trainer is
+	- Update van reg waarbij de course of deelnemer wordt aangepast
+	- Insert in offr waarbij niet aan de condities wordt voldaan
+
+	Gekozen voor een sproc insert van offr, omdat dat het meest waarschijnlijke scenario is
+*******************************************************************************************/
+GO
+CREATE OR ALTER PROC usp_InsertOffering
+	(
+		@course VARCHAR(6),
+		@starts DATE,
+		@status VARCHAR(4),
+		@maxcap NUMERIC(2),
+		@trainer NUMERIC(4),
+		@loc VARCHAR(14)
+	)
+AS
+BEGIN
+	SET NOCOUNT ON
+	SET XACT_ABORT OFF
+	DECLARE @TranCount INT = @@TRANCOUNT
+	IF @TranCount > 0
+		SAVE TRAN ProcedureSave
+	ELSE
+		BEGIN TRAN
+	BEGIN TRY
+		IF EXISTS (
+				SELECT *
+					FROM emp
+					WHERE job <> 'TRAINER'
+					AND empno = @trainer
+			)
+			THROW 50110, 'Iemand die een course geeft moet een trainer zijn', 1
+		IF EXISTS (
+				SELECT *
+					FROM emp
+					WHERE empno = @trainer
+					AND (
+						DATEADD(YEAR, 1, hired) < GETDATE()
+						OR NOT EXISTS (
+							SELECT *
+								FROM reg
+								WHERE stud = @trainer
+								AND course = @course
+						)
+					)
+			)
+			THROW 50111, 'Een trainer moet of minimaal 1 jaar in dienst zijn, of moet de course hebben gevolgd', 1
+		INSERT INTO offr VALUES (@course, @starts, @status, @maxcap, @trainer, @loc)
+		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
+	END TRY
+	BEGIN CATCH
+		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
+		ELSE
+			BEGIN
+				IF XACT_STATE() <> -1 ROLLBACK TRAN ProcedureSave
+			END;
+		THROW
+	END CATCH
+END
+GO
