@@ -170,8 +170,58 @@ GO
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
+	De starts + dur van de nieuwe offr mogen niet vallen binnen andere al gegeven offrs.
+
+	Conditie A: StartA > EndB
+	Conditie B: EndA < StartB
+	Er is overlap als geen van beide waar is
+
+	Kan misgaan als:
+
+	Nieuwe insert wordt gedaan in offr, en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
+	Nieuwe insert wordt gedaan in offr, en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
+
+	Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
+	
+	-- Deze trigger handeld geen inserts of deletes af binnen de crs tabel, daarom hier niet aan voldaan worden
+	Bij een update van de duur van een course in de crs tabel waardoor deze komt te vallen binnen de duur van een andere offer
+
 *******************************************************************************************/
--- Procedure 3
+GO
+CREATE OR ALTER TRIGGER utr_OverlappingCourseOfferings
+	ON offr
+	AFTER INSERT, UPDATE
+AS
+BEGIN
+	SET NOCOUNT ON
+
+	BEGIN TRY
+		IF (UPDATE(starts))
+		BEGIN
+			IF exists (	
+				SELECT *
+				FROM inserted I
+				WHERE exists (
+					SELECT *
+					FROM offr O
+					WHERE (O.trainer = I.trainer) AND (
+						-- StartA <= EndB
+						(I.starts <= DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = O.course), O.starts))
+						AND
+						-- EndA >= StartB
+						(DATEADD(DAY, (SELECT dur-1 FROM crs WHERE code = I.course), I.starts) >= O.starts)	
+					) AND (O.course <> I.course AND O.starts <> I.starts)
+				)								
+			)
+			THROW 50061, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
+		END
+	END TRY
+
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
 
 
 /*******************************************************************************************
@@ -291,7 +341,6 @@ GO
 
 
 /*******************************************************************************************
-	Constraint 9
 	9.	At least half of the course offerings (measured by duration) taught by a trainer must be ‘home based’. 
 	Note: ‘Home based’ means the course is offered at the same location where the employee is employed.
 
@@ -335,3 +384,126 @@ BEGIN
 		THROW
 	END CATCH
 END
+
+
+/*******************************************************************************************
+	10.	Offerings with 6 or more registrations must have status confirmed. 
+
+	Wanneer er een insert of een update wordt gedaan in de registratie tabel
+	Moet er gekeken worden of er courses zijn waar 6 of meer registraties op zijn.	
+
+	Kan afgaan wanneer:
+		- Er een nieuwe insert wordt gedaan in de reg tabel
+		- Er een update wordt gedaan op de course in van een record in de reg tabel
+
+	Er is gekozen voor een trigger, omdat deze verandering/check gedaan kan worden na
+	dat er een insert/update is gedaan. Dit is niet belangrijk om te controleren
+	voordat de insert/update gedaan wordt.
+	
+*******************************************************************************************/
+GO
+CREATE OR ALTER TRIGGER utr_OfferingsStatusChange
+	ON reg
+	AFTER INSERT, UPDATE
+AS
+BEGIN
+	SET NOCOUNT ON
+
+	BEGIN TRY
+		IF (UPDATE(course))
+			UPDATE offr
+			SET status = 'CONF'
+			WHERE course IN (
+				SELECT O.course
+				FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+				WHERE O.status <> 'CONF'
+				GROUP BY O.course, O.starts
+				HAVING COUNT(*) >= 6
+			) AND starts IN (
+				SELECT O.starts
+				FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+				WHERE O.status <> 'CONF'
+				GROUP BY O.course, O.starts
+				HAVING COUNT(*) >= 6
+			)
+	END TRY
+
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
+
+
+/*******************************************************************************************
+	11.	You are allowed to teach a course only if:
+		- your job type is trainer and
+		- you have been employed for at least one year 
+		- or you have attended the course yourself (as participant) 
+
+	Uitgegaan van job = 'TRAINER' AND (employed > 1 year OR attended course)
+
+	Kan misgaan bij:
+	- Update van emp waarbij de job wordt veranderd naar iets anders dan trainer
+	- Update van emp waarbij de hiredDate naar voren wordt gezet
+	- Delete van reg waarbij de gedelete record van een (nu) trainer is
+	- Update van reg waarbij de course of deelnemer wordt aangepast
+	- Insert in offr waarbij niet aan de condities wordt voldaan
+
+	Gekozen voor een sproc insert van offr, omdat dat het meest waarschijnlijke scenario is
+*******************************************************************************************/
+GO
+CREATE OR ALTER PROC usp_InsertOffering
+	(
+		@course VARCHAR(6),
+		@starts DATE,
+		@status VARCHAR(4),
+		@maxcap NUMERIC(2),
+		@trainer NUMERIC(4),
+		@loc VARCHAR(14)
+	)
+AS
+BEGIN
+	SET NOCOUNT ON
+	SET XACT_ABORT OFF
+	DECLARE @TranCount INT = @@TRANCOUNT
+	IF @TranCount > 0
+		SAVE TRAN ProcedureSave
+	ELSE
+		BEGIN TRAN
+	BEGIN TRY
+		IF EXISTS (
+				SELECT *
+					FROM emp
+					WHERE job <> 'TRAINER'
+					AND empno = @trainer
+			)
+			THROW 50110, 'Iemand die een course geeft moet een trainer zijn', 1
+		IF EXISTS (
+				SELECT *
+					FROM emp
+					WHERE empno = @trainer
+					AND (
+						DATEADD(YEAR, 1, hired) < GETDATE()
+						OR NOT EXISTS (
+							SELECT *
+								FROM reg
+								WHERE stud = @trainer
+								AND course = @course
+						)
+					)
+			)
+			THROW 50111, 'Een trainer moet of minimaal 1 jaar in dienst zijn, of moet de course hebben gevolgd', 1
+		INSERT INTO offr VALUES (@course, @starts, @status, @maxcap, @trainer, @loc)
+		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
+	END TRY
+	BEGIN CATCH
+		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
+		ELSE
+			BEGIN
+				IF XACT_STATE() <> -1 ROLLBACK TRAN ProcedureSave
+			END;
+		THROW
+	END CATCH
+END
+GO

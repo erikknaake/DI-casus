@@ -40,6 +40,7 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	Constraint 2
 	A department that employs the president or a manager should also employ at least one administrator.
@@ -234,6 +235,7 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	Constraint 3
 	All employees should be age 18 or older
@@ -255,6 +257,7 @@ BEGIN
 	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -18, GETDATE()), NULL, NULL, NULL, NULL, NULL)
 END
 GO
+
 
 /*******************************************************************************************
 	Constraint 4
@@ -503,6 +506,94 @@ GO
 
 
 /*******************************************************************************************
+	Constraint 6
+	Trainers cannot teach different courses simultaneously. 
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testCourseOfferingsCantOverlap'
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.ApplyTrigger 'dbo.offr', 'dbo.utr_OverlappingCourseOfferings'
+	SELECT *
+		INTO expected
+		FROM dbo.offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWithoutErrors
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL), ('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES ('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileEndWillSurpassStartOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-06', NULL, NULL, 1016, NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileStartsIsLessThenEndOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	INSERT INTO offr VALUES ('APEX', '2006-10-10', NULL, NULL, 1016, NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoEndWillSurpassStartOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	UPDATE offr
+		SET starts = '2006-10-09'
+		WHERE course = 'AM4DP' AND starts ='2006-10-08'
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoStartsIsLessThenEndOfAnotherOffer
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50061
+
+	UPDATE offr
+		SET starts = '2006-10-17'
+		WHERE course = 'PLSQL' AND starts ='2006-10-18'
+END
+GO
+
+
+/*******************************************************************************************
 	Constraint 7
 	An active employee cannot be managed by a terminated employee.
 *******************************************************************************************/
@@ -618,10 +709,9 @@ END
 GO
 
 
-
 /*******************************************************************************************
 	Constraint 9
-	9.	At least half of the course offerings (measured by duration) taught by a trainer must be ‘home based’.
+	At least half of the course offerings (measured by duration) taught by a trainer must be ‘home based’.
 	Note: ‘Home based’ means the course is offered at the same location where the employee is employed.
 *******************************************************************************************/
 EXEC tSQLt.NewTestClass 'testAtLeastHalfHomeBasedOfferings'
@@ -669,6 +759,7 @@ BEGIN
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
 	INSERT INTO offr VALUES (3, NULL, NULL, NULL, 1, 'Arnhem')
+
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
@@ -685,6 +776,7 @@ BEGIN
 	UPDATE offr
 		SET loc = 'Arnhem'
 		WHERE course = 3 AND trainer = 1
+
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
@@ -700,6 +792,7 @@ BEGIN
 	UPDATE offr
 		SET loc = 'Arnhem', trainer = 2
 		WHERE course = 3 AND trainer = 1
+
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
@@ -716,9 +809,220 @@ BEGIN
 	UPDATE offr
 		SET trainer = 3
 		WHERE course = 3 AND trainer = 1
+
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
+
+
+/*******************************************************************************************
+	Constraint 10
+	Offerings with 6 or more registrations must have status confirmed. 
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testCourseStatusChange'
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.FakeTable 'dbo.reg'
+	EXEC tSQLt.ApplyTrigger 'dbo.reg', 'dbo.utr_OfferingsStatusChange'
+	SELECT *
+		INTO expected
+		FROM dbo.offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testSingleInsertToMakeNoOffrChange
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testSingleInsertToMakeOffrTurnCONF
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testDoubleInsertToMakeOffrsTurnCONF
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL),
+							('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+	INSERT INTO reg VALUES  (NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL),
+								('SQL', '2008-10-08', 'CONF', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseStatusChange.testDoubleInsertToMakeOneOffrTurnCONF
+AS
+BEGIN
+	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL),
+							('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+	INSERT INTO reg VALUES  (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL),
+							(NULL, 'PLSQL', '2006-10-08', NULL)
+	INSERT INTO reg VALUES  (NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL),
+							(NULL, 'SQL', '2008-10-08', NULL)
+
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL),
+								('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectNoException
+	
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+END
+GO
+
+
+/*******************************************************************************************
+	Constraint 11
+	You are allowed to teach a course only if:
+	your job type is trainer and
+	-      you have been employed for at least one year 
+	-	or you have attended the course yourself (as participant) 
+*******************************************************************************************/
+EXEC tSQLt.NewTestClass 'testTeacherRequirements'
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.SetUp
+AS
+BEGIN
+	EXEC tSQLt.FakeTable 'dbo.emp'
+	EXEC tSQLt.FakeTable 'dbo.reg'
+	EXEC tSQLt.FakeTable 'dbo.offr'
+	EXEC tSQLt.FakeTable 'dbo.crs'
+	SELECT *
+		INTO expected
+		FROM dbo.offr
+	INSERT INTO emp VALUES (1, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL), 
+		(2, NULL, 'SALESREP', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
+		(3, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
+		(4, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
+		(5, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL)
+	INSERT INTO reg VALUES (4, 'DMDD', NULL, NULL), (3, 'DI', NULL, NULL), (5, 'DI', NULL, NULL)
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerEmployedFor1YearAndHadCourse
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+
+	INSERT INTO expected VALUES ('DI', @date, 'CONF', 2, 5, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+
+	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 5, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerEmployedFor1YearAndNotHadCourse
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+
+	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 5, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+
+	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 5, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerNotEmployedFor1YearHadCourse
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+
+	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 4, 'Zutphen')
+	EXEC tSQLt.ExpectNoException
+
+	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 4, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testTrainerNotHadCourseAndNotEmployedFor1Year
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50111
+
+	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 4, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testTeacherRequirements.testNotATrainer
+AS
+BEGIN
+	DECLARE @date DATE = GETDATE();
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50110
+
+	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 2, 'Zutphen'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
 
 /*******************************************************************************************
 	Run all tests
