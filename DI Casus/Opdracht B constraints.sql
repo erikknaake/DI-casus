@@ -343,8 +343,16 @@ GO
 /*******************************************************************************************
 	10.	Offerings with 6 or more registrations must have status confirmed. 
 
+	Wanneer er een insert of een update wordt gedaan in de registratie tabel
+	Moet er gekeken worden of er courses zijn waar 6 of meer registraties op zijn.	
 
-	
+	Kan afgaan wanneer:
+		- Er een nieuwe insert wordt gedaan in de reg tabel
+		- Er een update wordt gedaan op de course in van een record in de reg tabel
+
+	Er is gekozen voor een trigger, omdat deze verandering/check gedaan kan worden na
+	dat er een insert/update is gedaan. Dit is niet belangrijk om te controleren
+	voordat de insert/update gedaan wordt.
 	
 *******************************************************************************************/
 GO
@@ -356,6 +364,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	BEGIN TRY
+		IF (UPDATE(course))
 		UPDATE offr
 		SET status = 'CONF'
 		WHERE course IN (
