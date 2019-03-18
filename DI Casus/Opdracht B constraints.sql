@@ -335,35 +335,3 @@ BEGIN
 		THROW
 	END CATCH
 END
-
-SELECT SUM(dur)
-	FROM offr o INNER JOIN crs c ON o.course = c.code
-		INNER JOIN emp e ON o.trainer = e.empno
-		INNER JOIN dept d ON e.deptno = d.deptno
-	WHERE d.loc = o.loc
-SELECT SUM(dur) FROM crs c INNER JOIN offr o ON (c.code = o.course)
-
-SELECT SUM(dur)
-	FROM offr o INNER JOIN crs c ON o.course = c.code
-		INNER JOIN emp e ON o.trainer = e.empno
-		INNER JOIN dept d ON e.deptno = d.deptno
-	WHERE d.loc <> o.loc
-
-SELECT SUM(dur)
-	FROM offr o INNER JOIN crs c ON o.course = c.code
-		INNER JOIN emp e ON o.trainer = e.empno
-		INNER JOIN dept d ON e.deptno = d.deptno
-	WHERE d.loc = o.loc
-SELECT SUM(dur) FROM crs c INNER JOIN offr o ON (c.code = o.course)
-
-SELECT homeBasedDur.dur, halfDur.dur
-	FROM (
-		SELECT SUM(dur) as dur
-		FROM offr o INNER JOIN crs c ON o.course = c.code
-			INNER JOIN emp e ON o.trainer = e.empno
-			INNER JOIN dept d ON e.deptno = d.deptno
-		WHERE d.loc = o.loc
-	) as homeBasedDur, (
-		SELECT SUM(dur) / 2 as dur
-			FROM crs c INNER JOIN offr o ON c.code = o.course
-	) as halfDur
