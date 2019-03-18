@@ -338,3 +338,52 @@ BEGIN
 	END CATCH
 END
 GO
+
+
+/*******************************************************************************************
+	10.	Offerings with 6 or more registrations must have status confirmed. 
+
+	Wanneer er een insert of een update wordt gedaan in de registratie tabel
+	Moet er gekeken worden of er courses zijn waar 6 of meer registraties op zijn.	
+
+	Kan afgaan wanneer:
+		- Er een nieuwe insert wordt gedaan in de reg tabel
+		- Er een update wordt gedaan op de course in van een record in de reg tabel
+
+	Er is gekozen voor een trigger, omdat deze verandering/check gedaan kan worden na
+	dat er een insert/update is gedaan. Dit is niet belangrijk om te controleren
+	voordat de insert/update gedaan wordt.
+	
+*******************************************************************************************/
+GO
+CREATE OR ALTER TRIGGER utr_OfferingsStatusChange
+	ON reg
+	AFTER INSERT, UPDATE
+AS
+BEGIN
+	SET NOCOUNT ON
+
+	BEGIN TRY
+		IF (UPDATE(course))
+			UPDATE offr
+			SET status = 'CONF'
+			WHERE course IN (
+				SELECT O.course
+				FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+				WHERE O.status <> 'CONF'
+				GROUP BY O.course, O.starts
+				HAVING COUNT(*) >= 6
+			) AND starts IN (
+				SELECT O.starts
+				FROM offr O JOIN reg R ON O.course = R.course AND O.starts = R.starts
+				WHERE O.status <> 'CONF'
+				GROUP BY O.course, O.starts
+				HAVING COUNT(*) >= 6
+			)
+	END TRY
+
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
