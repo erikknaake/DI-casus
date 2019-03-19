@@ -16,6 +16,8 @@ go
 	FROM emp
 	WHERE job = 'PRESIDENT'*/
 
+IF OBJECT_ID('dbo.CHK_PresidentSalary', 'C') IS NOT NULL 
+    ALTER TABLE dbo.emp DROP CONSTRAINT CHK_PresidentSalary 
 --Constraint
 ALTER TABLE emp
 	ADD CONSTRAINT CHK_PresidentSalary
@@ -116,6 +118,8 @@ GO
 	age >= 18 OK
 	age < 18 NOT OK
 *******************************************************************************************/
+IF OBJECT_ID('dbo.CHK_employee_age', 'C') IS NOT NULL 
+    ALTER TABLE dbo.emp DROP CONSTRAINT CHK_employee_age 
 ALTER TABLE emp
 	ADD CONSTRAINT CHK_employee_age
 	CHECK (DATEADD(YEAR, 18, born) < GETDATE())
