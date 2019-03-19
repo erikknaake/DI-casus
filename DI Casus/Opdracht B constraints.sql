@@ -38,19 +38,14 @@ go
 	(not employs president && not employs manager) || employs admin
 	-----------------------------------------------------------------------------------------
 	Kan misgaan als:
-	Als een president/manager wordt geinsert in emp OF
-
-	Als in emp de job van een medewerker naar president/manager wordt geupdate 
+	- Als een president/manager wordt geinsert in emp OF
+	- Als in emp de job van een medewerker naar president/manager wordt geupdate 
 	en er geen administrator in de afdeling is of de geupdate medewerker de laatste administrator van de afdeling was OF
-
-	Als in emp de laatste administrator van een afdeling wordt geupdatet naar een andere job OF
-
-	Als in emp de departement van een president/manager wordt geupdatet naar een departement zonder administrator OF
-
-	Als in emp de departement van de laatste administrator van een afdeling wordt geupdatet 
+	- Als in emp de laatste administrator van een afdeling wordt geupdatet naar een andere job OF
+	- Als in emp de departement van een president/manager wordt geupdatet naar een departement zonder administrator OF
+	- Als in emp de departement van de laatste administrator van een afdeling wordt geupdatet 
 	en er een president/manager is in de oude afdeling OF
-
-	Als in emp de laatste administrator van de afdeling gedeletet wordt en er een president/manager is in de afdeling
+	- Als in emp de laatste administrator van de afdeling gedeletet wordt en er een president/manager is in de afdeling
 
 	Er is gekozen om de update van de job te implementeren, 
 	omdat dit evenveel gevallen zijn als updates voor het updaten van het departmentnummer (de meeste gevallen)
@@ -64,40 +59,53 @@ CREATE OR ALTER PROC usp_UpdateEmpJob
 	)
 AS
 BEGIN
+	SET NOCOUNT ON
+	SET XACT_ABORT OFF
+	DECLARE @TranCount INT = @@TRANCOUNT
+	IF @TranCount > 0
+		SAVE TRAN ProcedureSave
+	ELSE
+		BEGIN TRAN
 	BEGIN TRY
 		DECLARE @deptno NUMERIC(2,0) = (
-						SELECT deptno
-							FROM emp
-							WHERE empno = @empno --PK, dus veilig om aan te nemen dat het een scalar is
-					) 
-		IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND NOT EXISTS (
-			-- Wordt een president of manager, check of er nog een (andere, mag niet zich zelf zijn met zijn oude job) admin is
-			SELECT *
-				FROM emp
-				WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno
-			)
+							SELECT deptno
+								FROM emp
+								WHERE empno = @empno --PK, dus veilig om aan te nemen dat het een scalar is
+						) 
+			IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND NOT EXISTS (
+				-- Wordt een president of manager, check of er nog een (andere, mag niet zich zelf zijn met zijn oude job) admin is
+				SELECT *
+					FROM emp
+					WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno
+				)
 		
-			THROW 50001, 'Er is geen admin in deze afdeling', 1
-		IF EXISTS (
-			-- Emp die geupdate wordt is een admin, dus als er een President of Manager werkt EN het de laatste admin is in de afdeling, tegenhouden
-			SELECT *
-				FROM Emp
-				WHERE empno = @empno AND job = 'ADMIN'
-			) AND NOT EXISTS (
+				THROW 50020, 'Er is geen admin in deze afdeling', 1
+			IF EXISTS (
+				-- Emp die geupdate wordt is een admin, dus als er een President of Manager werkt EN het de laatste admin is in de afdeling, tegenhouden
 				SELECT *
 					FROM Emp
-					WHERE job = 'ADMIN' and deptno = @deptno AND empno <> @empno -- Het is de laatste admin als hier true uitkomt
-			) AND EXISTS (
-				SELECT *
-					FROM Emp
-					WHERE deptno = @deptno AND (job = 'PRESIDENT' OR job = 'MANAGER') -- En er werkt een president of manager in de afdeling
-			)
-			THROW 50002, 'Je kunt de job van de laatste admin van een afdeling waar een president of manager werkt niet veranderen', 1
-		UPDATE emp
-			SET job = @job
-			WHERE empno = @empno
+					WHERE empno = @empno AND job = 'ADMIN'
+				) AND NOT EXISTS (
+					SELECT *
+						FROM Emp
+						WHERE job = 'ADMIN' and deptno = @deptno AND empno <> @empno -- Het is de laatste admin als hier true uitkomt
+				) AND EXISTS (
+					SELECT *
+						FROM Emp
+						WHERE deptno = @deptno AND (job = 'PRESIDENT' OR job = 'MANAGER') -- En er werkt een president of manager in de afdeling
+				)
+				THROW 50021, 'Je kunt de job van de laatste admin van een afdeling waar een president of manager werkt niet veranderen', 1
+			UPDATE emp
+				SET job = @job
+				WHERE empno = @empno
+		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
 	END TRY
 	BEGIN CATCH
+		IF @TranCount = 0 AND XACT_STATE() = 1 ROLLBACK TRAN
+		ELSE
+			BEGIN
+				IF XACT_STATE() <> -1 ROLLBACK TRAN ProcedureSave
+			END;
 		THROW
 	END CATCH
 END
@@ -121,11 +129,10 @@ go
 
 	Kan misgaan bij:
 
-	Insert in grd waarbij de llimit lager is dan de llimit van een lagere grd
-	Insert in grd waarbij de ulimit lager is dan de ulimit van een lagere grd
-
-	Update van grd waarbij de llimit lager wordt dan de llimit van een lagere grd
-	Update van grd waarbij de ulimit lager wordt dan de ulimit van een lagere grd
+	- Insert in grd waarbij de llimit lager is dan de llimit van een lagere grd
+	- Insert in grd waarbij de ulimit lager is dan de ulimit van een lagere grd
+	- Update van grd waarbij de llimit lager wordt dan de llimit van een lagere grd
+	- Update van grd waarbij de ulimit lager wordt dan de ulimit van een lagere grd
 
 	Gekozen voor een trigger omdat die met dezelfde code zowel voor inserts als updates kan werken
 *******************************************************************************************/
@@ -151,7 +158,7 @@ BEGIN
 							)
 					)
 				)
-				THROW 50003, 'Salary grades kunnen niet overlappen', 1
+				THROW 50040, 'Salary grades kunnen niet overlappen', 1
 		END
 	END TRY
 	BEGIN CATCH
@@ -166,7 +173,7 @@ GO
 	Note: the use of a filtered index is not allowed.
 *******************************************************************************************/
 -- Dit is in het COURSE_constraint.sql bestand al gedaan onder de constraint: ofr_unq.
-
+-- TODO:
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
@@ -178,13 +185,12 @@ GO
 
 	Kan misgaan als:
 
-	Nieuwe insert wordt gedaan in offr, en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
-	Nieuwe insert wordt gedaan in offr, en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
+	- Nieuwe insert wordt gedaan in offr, en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
+	- Nieuwe insert wordt gedaan in offr, en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
+	- Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
+	- Bij een update van de duur van een course in de crs tabel waardoor deze komt te vallen binnen de duur van een andere offer
 
-	Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
-	
 	-- Deze trigger handeld geen inserts of deletes af binnen de crs tabel, daarom hier niet aan voldaan worden
-	Bij een update van de duur van een course in de crs tabel waardoor deze komt te vallen binnen de duur van een andere offer
 
 *******************************************************************************************/
 GO
@@ -213,7 +219,7 @@ BEGIN
 					) AND (O.course <> I.course AND O.starts <> I.starts)
 				)								
 			)
-			THROW 50061, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
+			THROW 50060, 'Een nieuwe offr mag niet binnen de tijdsduur van een al bestaande offr vallen', 1
 		END
 	END TRY
 
@@ -265,7 +271,7 @@ BEGIN
 							WHERE m.empno = t.empno
 					)
 			)
-			THROW 50006, 'Deze employee is nog een manager van een actieve employee', 1
+			THROW 50070, 'Deze employee is nog een manager van een actieve employee', 1
 
 		INSERT INTO term (empno, leftcomp, comments) VALUES (@empno, @leftComp, @comments)
 
@@ -322,7 +328,7 @@ BEGIN
 			FROM offr
 			WHERE trainer = @stud AND (course = @course AND starts = @starts)
 		)
-		THROW 50081, 'Er mag niet geregistreerd worden op een course offering dat gegeven wordt door dezelfde employee', 1
+		THROW 50080, 'Er mag niet geregistreerd worden op een course offering dat gegeven wordt door dezelfde employee', 1
 
 		INSERT INTO reg VALUES (@stud, @course, @starts, @eval)
 
@@ -393,8 +399,8 @@ END
 	Moet er gekeken worden of er courses zijn waar 6 of meer registraties op zijn.	
 
 	Kan afgaan wanneer:
-		- Er een nieuwe insert wordt gedaan in de reg tabel
-		- Er een update wordt gedaan op de course in van een record in de reg tabel
+	- Er een nieuwe insert wordt gedaan in de reg tabel
+	- Er een update wordt gedaan op de course in van een record in de reg tabel
 
 	Er is gekozen voor een trigger, omdat deze verandering/check gedaan kan worden na
 	dat er een insert/update is gedaan. Dit is niet belangrijk om te controleren
