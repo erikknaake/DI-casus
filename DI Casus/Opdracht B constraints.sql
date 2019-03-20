@@ -192,7 +192,19 @@ BEGIN
 	BEGIN TRY
 		SET NOCOUNT ON
 		
-
+		IF (UPDATE(starts) OR UPDATE(course))
+		BEGIN
+			IF EXISTS (
+				SELECT 1
+				FROM inserted I
+				WHERE EXISTS (
+					SELECT 1
+					FROM offr O
+					WHERE I.course = O.course AND I.starts = O.starts
+				)
+			)
+			THROW 50050, 'Er mogen geen offers zijn met dezelfde start datum en trainer', 1
+		END
 	END TRY
 	BEGIN CATCH
 		THROW
