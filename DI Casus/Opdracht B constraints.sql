@@ -175,9 +175,57 @@ GO
 /*******************************************************************************************
 	5.	The start date and known trainer uniquely identify course offerings. 
 	Note: the use of a filtered index is not allowed.
+
+	Er mag geen nieuwe offr worden toegevoegd wanneer er al een offr bestaat met dezelfde
+	start tijd en trainer. Maar er mogen wel meerdere offrs worden toegevoegd met dezelfde
+	start datum met null als trainer.
+
+	Kan misgaan bij:
+		- Insert in offr waarbij de trainer en starts gelijk zijn aan een bestaande offr
+		- Update van offr waarbij de trainer gelijk raakt aan een bestaande offr trainer
+			met dezelfde start datum
+		- Update van offr waarbij de start datum gelijk raakt aan een bestaande offr
+			met dezelfde trainer
+
+	Aangezien er bij constraint 11 gebruik gemaakt wordt van een stored procedure die
+	er voor zorgt dat er een insert gedaan wordt in de offr tabel, is er bij deze
+	constraint voor gekozen om een trigger toe te passen. Dit zodat er geen 
+	onduidelijkheid onstaat over welke stored procedure er gebruikt moet gaan
+	worden. Het zou ook een mogelijkheid zijn om de procedure bij 11 uit te breiden
+	maar voor de duidelijkheid is dit los getrokken.
 *******************************************************************************************/
--- Dit is in het COURSE_constraint.sql bestand al gedaan onder de constraint: ofr_unq.
--- TODO:
+IF OBJECT_ID('dbo.ofr_unq', 'UQ') IS NOT NULL
+	ALTER TABLE offr DROP CONSTRAINT ofr_unq
+
+GO
+CREATE OR ALTER TRIGGER utr_UniqueStartTrainer
+	ON offr
+	AFTER INSERT, UPDATE
+AS
+BEGIN 
+	BEGIN TRY
+		SET NOCOUNT ON
+		
+		IF (UPDATE(starts) OR UPDATE(trainer))
+		BEGIN
+			IF EXISTS (
+				SELECT 1
+				FROM inserted I
+				WHERE EXISTS (
+					SELECT 1
+					FROM offr O
+					WHERE I.trainer = O.trainer AND I.starts = O.starts
+					HAVING count(*) > 1
+				)
+			)
+			THROW 50050, 'Er mogen geen offers zijn met dezelfde start datum en trainer', 1
+		END
+	END TRY
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.

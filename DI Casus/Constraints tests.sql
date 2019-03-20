@@ -404,7 +404,6 @@ GO
 	The start date and known trainer uniquely identify course offerings. 
 	Note: the use of a filtered index is not allowed.
 *******************************************************************************************/
---TODO aanpassen
 EXEC tSQLt.NewTestClass 'testOffrIsUniqueByTrainerAndStarts'
 
 GO
@@ -412,7 +411,7 @@ CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.SetUp
 AS
 BEGIN
 	EXEC tSQLt.FakeTable 'dbo.offr'
-	EXEC tSQLt.ApplyConstraint 'dbo.offr', 'ofr_unq'
+	EXEC tSQLt.ApplyTrigger 'dbo.offr', 'utr_UniqueStartTrainer'
 	SELECT *
 		INTO expected
 		FROM dbo.offr
@@ -467,7 +466,7 @@ AS
 BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
 	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
-	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 2627
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50050
 
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
 
@@ -494,8 +493,9 @@ CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameTrainerSameDateW
 AS
 BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
-	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
-	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 2627
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL),
+								(NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
+	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
 
