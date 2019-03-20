@@ -194,6 +194,9 @@ GO
 	worden. Het zou ook een mogelijkheid zijn om de procedure bij 11 uit te breiden
 	maar voor de duidelijkheid is dit los getrokken.
 *******************************************************************************************/
+IF OBJECT_ID('dbo.ofr_unq', 'UQ') IS NOT NULL
+	ALTER TABLE offr DROP CONSTRAINT ofr_unq
+
 GO
 CREATE OR ALTER TRIGGER utr_UniqueStartTrainer
 	ON offr

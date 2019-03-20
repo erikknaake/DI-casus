@@ -89,7 +89,7 @@ alter table offr add constraint  ofr_chk_mxcp  check (maxcap between 6 and 99);
 
   -- table constraints:
 alter table offr add constraint  ofr_pk        primary key (course,starts);
---alter table offr add constraint  ofr_unq       unique (starts,trainer); /* Deze constraint is volgens de docent niet afdoende. Deze wordt verbeterd in constraint 5 */
+alter table offr add constraint  ofr_unq       unique (starts,trainer);
   -- attribute constraints:
 alter table reg add constraint  reg_chk_stud  check (stud > 999);
 alter table reg add constraint  reg_chk_crse  check (course = upper(course));
