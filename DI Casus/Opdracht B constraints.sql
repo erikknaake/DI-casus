@@ -175,9 +175,30 @@ GO
 /*******************************************************************************************
 	5.	The start date and known trainer uniquely identify course offerings. 
 	Note: the use of a filtered index is not allowed.
+
+	Aangezien er bij constraint 11 gebruik gemaakt wordt van een stored procedure die
+	er voor zorgt dat er een insert gedaan wordt in de offr tabel, is er bij deze
+	constraint voor gekozen om een trigger toe te passen. Dit zodat er geen 
+	onduidelijkheid onstaat over welke stored procedure er gebruikt moet gaan
+	worden. Het zou ook een mogelijkheid zijn om de procedure bij 11 uit te breiden
+	maar voor de duidelijkheid is dit los getrokken.
 *******************************************************************************************/
--- Dit is in het COURSE_constraint.sql bestand al gedaan onder de constraint: ofr_unq.
--- TODO:
+GO
+CREATE OR ALTER TRIGGER utr_UniqueStartTrainer
+	ON offr
+	AFTER INSERT, UPDATE
+AS
+BEGIN 
+	BEGIN TRY
+		SET NOCOUNT ON
+		
+
+	END TRY
+	BEGIN CATCH
+		THROW
+	END CATCH
+END
+GO
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
