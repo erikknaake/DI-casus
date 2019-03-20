@@ -192,7 +192,7 @@ BEGIN
 	BEGIN TRY
 		SET NOCOUNT ON
 		
-		IF (UPDATE(starts) OR UPDATE(course))
+		IF (UPDATE(starts) OR UPDATE(trainer))
 		BEGIN
 			IF EXISTS (
 				SELECT 1
@@ -200,7 +200,8 @@ BEGIN
 				WHERE EXISTS (
 					SELECT 1
 					FROM offr O
-					WHERE I.course = O.course AND I.starts = O.starts
+					WHERE I.trainer = O.trainer AND I.starts = O.starts
+					HAVING count(*) > 1
 				)
 			)
 			THROW 50050, 'Er mogen geen offers zijn met dezelfde start datum en trainer', 1
