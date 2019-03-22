@@ -76,7 +76,7 @@ BEGIN
 						) 
 			IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND NOT EXISTS (
 				-- Wordt een president of manager, check of er nog een (andere, mag niet zich zelf zijn met zijn oude job) admin is
-				SELECT *
+				SELECT 1
 					FROM emp
 					WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno
 				)
@@ -84,15 +84,15 @@ BEGIN
 				THROW 50020, 'Er is geen admin in deze afdeling', 1
 			IF EXISTS (
 				-- Emp die geupdate wordt is een admin, dus als er een President of Manager werkt EN het de laatste admin is in de afdeling, tegenhouden
-				SELECT *
+				SELECT 1
 					FROM Emp
 					WHERE empno = @empno AND job = 'ADMIN'
 				) AND NOT EXISTS (
-					SELECT *
+					SELECT 1
 						FROM Emp
 						WHERE job = 'ADMIN' and deptno = @deptno AND empno <> @empno -- Het is de laatste admin als hier true uitkomt
 				) AND EXISTS (
-					SELECT *
+					SELECT 1
 						FROM Emp
 						WHERE deptno = @deptno AND (job = 'PRESIDENT' OR job = 'MANAGER') -- En er werkt een president of manager in de afdeling
 				)
@@ -151,10 +151,10 @@ BEGIN
 		IF UPDATE(llimit) OR UPDATE(ulimit)
 		BEGIN
 			IF EXISTS (
-				SELECT *
+				SELECT 1
 					FROM inserted i
 					WHERE EXISTS (
-						SELECT *
+						SELECT 1
 							FROM grd g
 							WHERE g.grade < i.grade AND (
 								i.llimit < g.llimit OR
@@ -260,7 +260,7 @@ BEGIN
 				SELECT *
 				FROM inserted I
 				WHERE exists (
-					SELECT *
+					SELECT 1
 					FROM offr O
 					WHERE (O.trainer = I.trainer) AND (
 						-- StartA <= EndB
@@ -314,11 +314,11 @@ BEGIN
 	BEGIN TRY
 
 		IF EXISTS (
-				SELECT *
+				SELECT 1
 					FROM memp m
 					WHERE m.mgr = @empno
 					AND NOT EXISTS (
-						SELECT *
+						SELECT 1
 							FROM term t
 							WHERE m.empno = t.empno
 					)
@@ -376,7 +376,7 @@ BEGIN
 
 	BEGIN TRY
 		IF EXISTS (
-			SELECT *
+			SELECT 1
 			FROM offr
 			WHERE trainer = @stud AND (course = @course AND starts = @starts)
 		)
@@ -538,13 +538,13 @@ BEGIN
 			)
 			THROW 50110, 'Iemand die een course geeft moet een trainer zijn', 1
 		IF EXISTS (
-				SELECT *
+				SELECT 1
 					FROM emp
 					WHERE empno = @trainer
 					AND (
-						DATEADD(YEAR, 1, hired) < GETDATE()
+						(DATEDIFF(YEAR, hired, GETDATE()) < -1)
 						OR NOT EXISTS (
-							SELECT *
+							SELECT 1
 								FROM reg
 								WHERE stud = @trainer
 								AND course = @course
