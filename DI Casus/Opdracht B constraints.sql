@@ -539,20 +539,23 @@ BEGIN
 			THROW 50110, 'Iemand die een course geeft moet een trainer zijn', 1
 		IF EXISTS (
 				SELECT 1
-					FROM emp
-					WHERE empno = @trainer
-					AND (
-						(DATEDIFF(YEAR, hired, GETDATE()) < -1)
-						OR NOT EXISTS (
-							SELECT 1
-								FROM reg
-								WHERE stud = @trainer
-								AND course = @course
-						)
+					FROM emp e
+					WHERE e.empno = @trainer
+					AND (DATEDIFF(YEAR, hired, @starts) < 1)
+			) 
+			BEGIN
+				IF NOT EXISTS (
+					SELECT 1
+						FROM emp e INNER JOIN reg r ON e.empno = r.stud
+						WHERE e.empno = @trainer
+						AND r.course = @course
 					)
-			)
-			THROW 50111, 'Een trainer moet of minimaal 1 jaar in dienst zijn, of moet de course hebben gevolgd', 1
+				BEGIN;
+					THROW 50111, 'Een trainer die nog niet 1 jaar in dienst is moet de course hebben gevolgd', 1
+				END
+			END	
 		INSERT INTO offr VALUES (@course, @starts, @status, @maxcap, @trainer, @loc)
+
 		IF @TranCount = 0 AND XACT_STATE() = 1 COMMIT TRAN
 	END TRY
 	BEGIN CATCH
