@@ -1,0 +1,12 @@
+USE COURSE
+GO
+
+
+SELECT * FROM grd
+BEGIN TRAN
+	--CREATE NONCLUSTERED INDEX NCI_emp_dept
+		--ON emp(deptno)
+	UPDATE grd
+		SET llimit = 7500
+		WHERE grade = 8 
+ROLLBACK TRAN
