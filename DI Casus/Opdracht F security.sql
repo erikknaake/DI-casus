@@ -7,9 +7,6 @@ GO
 	Of course read access to the EMP and OFFR  tables are also needed
 	(foreign key checks require the user to have ac-cess to the referenced data). 
 *******************************************************************************************/
-
-DROP APPLICATION ROLE humanResourcesApp
-
 CREATE APPLICATION ROLE humanResourcesApp
     WITH PASSWORD = 'password'
 GO
