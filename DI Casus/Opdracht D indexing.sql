@@ -1,9 +1,6 @@
 USE COURSE
 GO
 
-
-SELECT * FROM emp
-
 BEGIN TRAN
 	-- Omdat er in de where zowel job als deptno worden gebruikt, zijn deze opgenomen in een nonclustered index, 
 	-- zodat er een covering index ontstaat
@@ -27,15 +24,20 @@ ROLLBACK TRAN
 SELECT * FROM offr
 
 BEGIN TRAN
+	-- Door deze index wordt bij query 2 in het execution plan gekozen voor een nonclustered index seek in plaats van een clustered index scan
+	-- Bij query 3 gebeurd hetzelfde. Deze indexes zijn beide covering, waardoor de query snelheid er op vooruitgaat
+	-- Het is sneller om een ingang te geven op trainer dan dat het is om een ingang te geven op starts
 	CREATE NONCLUSTERED INDEX NCI_offr
-		ON offr(course, trainer, starts)
+		ON offr(trainer) include(starts)
 	SET STATISTICS IO ON
-	EXEC sp_recompile 'dbo.utr_HomeBasedOfferings'
-	EXEC sp_recompile 'dbo.utr_OverlappingCourseOfferings'
+	EXEC sp_recompile 'dbo.utr_UniqueStartTrainer'
 
-	EXEC usp_InsertOffering @course = 'J2EE', @starts = '2019-04-03', @status = 'CONF', @maxCap = 6, @trainer = 1016, @loc = 'Arnhem' WITH RECOMPILE
-	-- Zoner NCI
-	-- Subtree costs: 0.0537541
-	-- 4 clustered index scans
+	INSERT INTO offr VALUES ('J2EE', GETDATE(), 'CONF', 6, 1016, 'Zutphen')
 
 ROLLBACK TRAN
+
+-- Ook even daadwerkelijk aanmaken nadat gebleken is dat ze optimaliseren.
+CREATE NONCLUSTERED INDEX NCI_emp
+	ON emp(job) include (deptno)
+CREATE NONCLUSTERED INDEX NCI_offr
+	ON offr(trainer) include(starts)
