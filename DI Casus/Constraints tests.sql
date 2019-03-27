@@ -1161,12 +1161,15 @@ BEGIN
 	SELECT *
 		INTO expected
 		FROM dbo.offr
-	INSERT INTO emp VALUES (1, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL), 
-		(2, NULL, 'SALESREP', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
-		(0, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
-		(4, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
-		(5, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL)
-	INSERT INTO reg VALUES (4, 'DMDD', NULL, NULL), (3, 'DI', NULL, NULL), (5, 'DI', NULL, NULL)
+
+	INSERT INTO emp VALUES  (1, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL), 
+							(2, NULL, 'SALESREP', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
+							(0, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
+							(4, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
+							(5, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL)
+	INSERT INTO reg VALUES	(4, 'DMDD', NULL, NULL), 
+							(3, 'DI', NULL, NULL), 
+							(5, 'DI', NULL, NULL)
 END
 GO
 
@@ -1177,6 +1180,7 @@ BEGIN
 	DECLARE @date DATE = GETDATE();
 
 	INSERT INTO expected VALUES ('DI', @date, 'CONF', 2, 5, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 5, 'Zutphen'
@@ -1192,6 +1196,7 @@ BEGIN
 	DECLARE @date DATE = GETDATE();
 
 	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 5, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 5, 'Zutphen'
@@ -1207,6 +1212,7 @@ BEGIN
 	DECLARE @date DATE = GETDATE();
 
 	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 4, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 4, 'Zutphen'
@@ -1220,6 +1226,7 @@ CREATE OR ALTER PROC testTeacherRequirements.testTrainerNotHadCourseAndNotEmploy
 AS
 BEGIN
 	DECLARE @date DATE = GETDATE();
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50111
 
 	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 4, 'Zutphen'
@@ -1233,6 +1240,7 @@ CREATE OR ALTER PROC testTeacherRequirements.testNotATrainer
 AS
 BEGIN
 	DECLARE @date DATE = GETDATE();
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50110
 
 	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 2, 'Zutphen'
