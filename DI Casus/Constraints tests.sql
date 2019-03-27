@@ -10,12 +10,15 @@ GO
 *******************************************************************************************/
 EXEC tSQLt.NewTestClass 'testEmps'
 
--- Before each test in the testEmps test class
 GO
 CREATE OR ALTER PROC testEmps.SetUp
 AS
 BEGIN
 	EXEC tSQLt.FakeTable @TableName = 'dbo.emp' -- Use of @SchemaName has been deprecated, use of tablename with schemaName prefixed is now prefered
+	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_PresidentSalary'
+	SELECT *
+		INTO expected
+		FROM dbo.emp
 END
 GO
 
@@ -23,9 +26,11 @@ GO
 CREATE OR ALTER PROC testEmps.testPresidentMontlySalaryShouldBeGreaterThan10000InvalidCase
 AS
 BEGIN
-	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_PresidentSalary'
-	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547 -- A check constraint should be violated
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547
+
 	INSERT INTO emp VALUES (NULL, NULL, 'PRESIDENT', NULL, NULL, NULL, 9999, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -33,9 +38,13 @@ GO
 CREATE OR ALTER PROC testEmps.testPresidentMontlySalaryShouldBeGreaterThan10000ValidCase
 AS
 BEGIN
-	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_PresidentSalary'
+	INSERT INTO expected VALUES (NULL, NULL, 'PRESIDENT', NULL, NULL, NULL, 10000, NULL, NULL) 
+
 	EXEC tSQLt.ExpectNoException
+
 	INSERT INTO emp VALUES (NULL, NULL, 'PRESIDENT', NULL, NULL, NULL, 10000, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -61,8 +70,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithoutAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'PRESIDENT'
@@ -75,9 +85,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'PRESIDENT'
@@ -90,8 +102,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithoutAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'MANAGER'
@@ -104,9 +117,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'MANAGER'
@@ -119,9 +134,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOtherWithManager
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50021
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -134,9 +151,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOtherWithPresident
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50021
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -149,8 +168,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOther
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -163,10 +183,13 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOtherWithPresident
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10),
+							(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+								(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -179,9 +202,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOther
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10),
+							(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+								(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -194,10 +219,13 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOtherWithManager
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES  (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10),
+							(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+								(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -210,8 +238,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToPresident
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (2, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'PRESIDENT'
@@ -224,8 +253,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToManager
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (2, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'MANAGER'
