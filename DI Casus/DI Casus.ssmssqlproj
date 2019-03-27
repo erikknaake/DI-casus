@@ -25,18 +25,6 @@
           <AssociatedConnUserName>sa</AssociatedConnUserName>
           <FullPath>Constraints tests.sql</FullPath>
         </FileNode>
-        <FileNode Name="Constraints thema 5.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
-          <AssociatedConnUserName>sa</AssociatedConnUserName>
-          <FullPath>Constraints thema 5.sql</FullPath>
-        </FileNode>
-        <FileNode Name="Constraints uit thema 3.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
-          <AssociatedConnUserName>sa</AssociatedConnUserName>
-          <FullPath>Constraints uit thema 3.sql</FullPath>
-        </FileNode>
         <FileNode Name="COURSE_constraints.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>

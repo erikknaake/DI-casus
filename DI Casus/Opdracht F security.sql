@@ -2,7 +2,9 @@ USE master
 GO
 
 /*******************************************************************************************
-	F.	Employees can register themselves for courses on offer using an app provided by the Human Resources department.
+	Opdracht F, deel 1
+	
+	Employees can register themselves for courses on offer using an app provided by the Human Resources department.
 	The only data the employee have full access to are the data in the REG table.
 	Of course read access to the EMP and OFFR  tables are also needed
 	(foreign key checks require the user to have ac-cess to the referenced data). 
@@ -12,15 +14,17 @@ CREATE APPLICATION ROLE humanResourcesApp
 GO
 
 USE COURSE
-go
+GO
 
 GRANT SELECT ON dbo.emp TO humanResourcesApp
 GRANT SELECT ON dbo.offr TO humanResourcesApp
 GRANT SELECT, UPDATE, INSERT, DELETE ON dbo.reg TO humanResourcesApp
 GO
 
--- Testjes of het werkt
 
+/******************************
+	Testjes of het werkt
+*******************************/
 -- Select op emp
 DECLARE @cookie varbinary(8000);  
 EXEC sp_setapprole 'humanResourcesApp', 'password', @fCreateCookie = true, @cookie = @cookie OUTPUT;  
@@ -134,7 +138,10 @@ GO
 
 
 /*******************************************************************************************
-	For reporting purposes a specific service account needs to be created allowing reporting tools full read access to all data. 
+	Opdracht F, deel 2
+
+	For reporting purposes a specific service account needs to be created allowing 
+	reporting tools full read access to all data. 
 *******************************************************************************************/
 CREATE USER reporter WITHOUT LOGIN
 GO
@@ -142,7 +149,9 @@ GO
 GRANT SELECT ON SCHEMA::dbo TO reporter
 GO
 
--- Testjes
+/******************************
+	Testjes of het werkt
+*******************************/
 EXECUTE AS USER = 'reporter'
 
 SELECT TOP 20 * FROM memp -- mag
