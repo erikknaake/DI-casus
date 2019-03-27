@@ -12,9 +12,6 @@ go
 
 	is not president || earns >= 10k
 *******************************************************************************************/
-/*SELECT *
-	FROM emp
-	WHERE job = 'PRESIDENT'*/
 
 IF OBJECT_ID('dbo.CHK_PresidentSalary', 'C') IS NOT NULL 
     ALTER TABLE dbo.emp DROP CONSTRAINT CHK_PresidentSalary 
@@ -129,7 +126,7 @@ go
 /*******************************************************************************************
 	4.	A salary grade overlaps with at most one lower salary grade. 
 	The llimit of a salary grade must be higher than the llimit of the next lower salary grade. 
-	The ulimit of the salary grade must be higher than the ulimit of the next lower salary grade. TODO: valideren of next lower salary grade inderdaad op grade slaat
+	The ulimit of the salary grade must be higher than the ulimit of the next lower salary grade.
 
 	Kan misgaan bij:
 
