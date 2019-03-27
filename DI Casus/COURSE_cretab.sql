@@ -7,7 +7,8 @@
 -- ===================================================================
 -- Drop database COURSE first ...
 -- ===================================================================
-
+USE master
+GO
 IF DB_ID('COURSE') IS NOT NULL
      DROP DATABASE COURSE
 GO
