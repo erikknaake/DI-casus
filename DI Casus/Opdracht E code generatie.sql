@@ -10,7 +10,7 @@ GO
 		ts TIMESTAMP NOT NULL,
 		<kolommen met datatypes>
 
-		CONSTRAINT pk_HIST_<table_name> PRIMARY KEY (ts, <pk uit tabel>)
+		CONSTRAINT pk_HIST_<tabel_name> PRIMARY KEY (ts, <pk uit tabel>)
 	)
 	GO
 	CREATE TRIGGER utr_HIST_<tabel naam> 
