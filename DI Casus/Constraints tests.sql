@@ -304,7 +304,6 @@ BEGIN
 END
 GO
 
--- Er wordt wel gethrowd, maar omdat de transactie wordt terug gedraaid gaat tSQLt over zijn nek
 GO
 CREATE OR ALTER PROC testSalaryGradesCantOverlap.testInsertWithWrongUpperLimit
 AS
@@ -393,6 +392,36 @@ BEGIN
 	UPDATE grd
 		SET ulimit = 22
 		WHERE grade = 2
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testMultiRowInsertTestSucces
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 15, 25, NULL), (3, 30, 80, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO grd VALUES (2, 15, 25, NULL), (3, 30, 80, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testMultiRowInsertTestError
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
+
+	INSERT INTO grd VALUES (2, 15, 25, NULL), (3, 10, 80, NULL)
 
 	EXEC tSQLt.AssertEqualsTable expected, grd
 END
@@ -503,6 +532,42 @@ BEGIN
 END
 GO
 
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testMultiRowInsertTestSucces
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL),
+								(NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+								(NULL, '27-NOV-2019', NULL, NULL, 3, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES (NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+							(NULL, '27-NOV-2019', NULL, NULL, 3, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testMultiRowInsertTestError
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL),
+								(NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+								(NULL, '27-NOV-2019', NULL, NULL, 3, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50050
+
+	INSERT INTO offr VALUES (NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+							(NULL, '27-APR-2019', NULL, NULL, 2, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
 
 /*******************************************************************************************
 	Constraint 6
@@ -542,10 +607,13 @@ CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileEndWillSurpas
 AS
 BEGIN
 	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	INSERT INTO offr VALUES ('AM4DP', '2006-10-06', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -554,10 +622,13 @@ CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileStartsIsLessT
 AS
 BEGIN
 	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	INSERT INTO offr VALUES ('APEX', '2006-10-10', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -565,14 +636,18 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoEndWillSurpassStartOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+							('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+								('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	UPDATE offr
 		SET starts = '2006-10-09'
 		WHERE course = 'AM4DP' AND starts ='2006-10-08'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -580,14 +655,52 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoStartsIsLessThenEndOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+							('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+								('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	UPDATE offr
 		SET starts = '2006-10-17'
 		WHERE course = 'PLSQL' AND starts ='2006-10-18'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testMultiRowInsertTestSucces
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT expected VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+							('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL),
+							('SQL', '2008-10-12', NULL, NULL, 1017, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES ('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL),
+							('SQL', '2008-10-12', NULL, NULL, 1017, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testMultiRowInsertTestError
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT expected VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
+
+	INSERT INTO offr VALUES ('APEX', '2006-10-12', NULL, NULL, 1016, NULL),
+							('SQL', '2008-10-10', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -832,7 +945,7 @@ BEGIN
 		FROM dbo.offr
 END
 GO
--- TODO: assert equalsTable
+
 GO
 CREATE OR ALTER PROC testCourseStatusChange.testSingleInsertToMakeNoOffrChange
 AS
