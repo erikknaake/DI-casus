@@ -7,7 +7,7 @@ BEGIN TRAN
 	-- En MS SQL ervoor kiest om een nonclustered index seek te gaan doen in plaats van een clustered index scan.
 	-- Op de huidige populatie is dit een vrijwel onmeetbaar verschil, echter kan het op grote populatie veel uitmaken
 	-- omdat deze stored procedure 2 keer gebruik maakt van deze index
-	CREATE NONCLUSTERED INDEX NCI_emp
+	CREATE NONCLUSTERED INDEX nci_Emp
 		ON emp(job) include (deptno)
 
 	SET STATISTICS IO ON
@@ -27,7 +27,7 @@ BEGIN TRAN
 	-- Door deze index wordt bij query 2 in het execution plan gekozen voor een nonclustered index seek in plaats van een clustered index scan
 	-- Bij query 3 gebeurd hetzelfde. Deze indexes zijn beide covering, waardoor de query snelheid er op vooruitgaat
 	-- Het is sneller om een ingang te geven op trainer dan dat het is om een ingang te geven op starts
-	CREATE NONCLUSTERED INDEX NCI_offr
+	CREATE NONCLUSTERED INDEX nci_Offr
 		ON offr(trainer) include(starts)
 	SET STATISTICS IO ON
 	EXEC sp_recompile 'dbo.utr_UniqueStartTrainer'
@@ -37,7 +37,7 @@ BEGIN TRAN
 ROLLBACK TRAN
 
 -- Ook even daadwerkelijk aanmaken nadat gebleken is dat ze optimaliseren.
-CREATE NONCLUSTERED INDEX NCI_emp
+CREATE NONCLUSTERED INDEX nci_Emp
 	ON emp(job) include (deptno)
-CREATE NONCLUSTERED INDEX NCI_offr
+CREATE NONCLUSTERED INDEX nci_Offr
 	ON offr(trainer) include(starts)
