@@ -936,10 +936,13 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testInsertHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
@@ -949,11 +952,13 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testInsertNotHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
-	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+
 	INSERT INTO offr VALUES (3, NULL, NULL, NULL, 1, 'Arnhem')
 
 	EXEC tSQLt.AssertEqualsTable expected, offr
@@ -964,11 +969,15 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateLocNotHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
-	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+							(3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+								(3, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+
 	UPDATE offr
 		SET loc = 'Arnhem'
 		WHERE course = 3 AND trainer = 1
@@ -981,9 +990,14 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateLocOrTrainerHalfHameBased --Niet mogelijk om dit scenario voor trainer en locatie los te testen
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 2, 'Arnhem')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+							(3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+								(3, NULL, NULL, NULL, 2, 'Arnhem')
+
 	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
 
 	UPDATE offr
 		SET loc = 'Arnhem', trainer = 2
@@ -997,11 +1011,15 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateTrainerNotHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
-	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+							(3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+								(3, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+
 	UPDATE offr
 		SET trainer = 3
 		WHERE course = 3 AND trainer = 1
