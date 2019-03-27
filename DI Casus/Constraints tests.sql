@@ -1063,7 +1063,7 @@ BEGIN
 	
 	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
 
-	EXEC tSQLt.AssertEqualsTable expected, reg
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -1083,7 +1083,7 @@ BEGIN
 	
 	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
 
-	EXEC tSQLt.AssertEqualsTable expected, reg
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -1108,9 +1108,10 @@ BEGIN
 
 	EXEC tSQLt.ExpectNoException
 	
-	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+	INSERT INTO reg VALUES	(NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'SQL', '2008-10-08', NULL)
 
-	EXEC tSQLt.AssertEqualsTable expected, reg
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -1134,9 +1135,10 @@ BEGIN
 
 	EXEC tSQLt.ExpectNoException
 	
-	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'SQL', '2008-10-08', NULL)
 
-	EXEC tSQLt.AssertEqualsTable expected, reg
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
