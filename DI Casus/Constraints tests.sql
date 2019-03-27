@@ -10,12 +10,15 @@ GO
 *******************************************************************************************/
 EXEC tSQLt.NewTestClass 'testEmps'
 
--- Before each test in the testEmps test class
 GO
 CREATE OR ALTER PROC testEmps.SetUp
 AS
 BEGIN
 	EXEC tSQLt.FakeTable @TableName = 'dbo.emp' -- Use of @SchemaName has been deprecated, use of tablename with schemaName prefixed is now prefered
+	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_PresidentSalary'
+	SELECT *
+		INTO expected
+		FROM dbo.emp
 END
 GO
 
@@ -23,9 +26,11 @@ GO
 CREATE OR ALTER PROC testEmps.testPresidentMontlySalaryShouldBeGreaterThan10000InvalidCase
 AS
 BEGIN
-	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_PresidentSalary'
-	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547 -- A check constraint should be violated
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547
+
 	INSERT INTO emp VALUES (NULL, NULL, 'PRESIDENT', NULL, NULL, NULL, 9999, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -33,9 +38,13 @@ GO
 CREATE OR ALTER PROC testEmps.testPresidentMontlySalaryShouldBeGreaterThan10000ValidCase
 AS
 BEGIN
-	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_PresidentSalary'
+	INSERT INTO expected VALUES (NULL, NULL, 'PRESIDENT', NULL, NULL, NULL, 10000, NULL, NULL) 
+
 	EXEC tSQLt.ExpectNoException
+
 	INSERT INTO emp VALUES (NULL, NULL, 'PRESIDENT', NULL, NULL, NULL, 10000, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -61,8 +70,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithoutAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'PRESIDENT'
@@ -75,9 +85,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToPresidentWithAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'PRESIDENT'
@@ -90,8 +102,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithoutAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'MANAGER'
@@ -104,9 +117,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testEmpToManagerWithAdmin
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 1, @job = 'MANAGER'
@@ -119,9 +134,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOtherWithManager
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50021
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -134,9 +151,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOtherWithPresident
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50021
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -149,8 +168,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOther
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -163,10 +183,13 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOtherWithPresident
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10),
+							(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+								(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -179,9 +202,11 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOther
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES	(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10),
+							(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+								(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -194,10 +219,13 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testNonLastAdminToOtherWithManager
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO dbo.emp VALUES (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
-	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES  (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10),
+							(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO expected VALUES (1, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), 
+								(3, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
@@ -210,8 +238,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToPresident
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (2, NULL, 'PRESIDENT', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'PRESIDENT'
@@ -224,8 +253,9 @@ GO
 CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToManager
 AS
 BEGIN
-	INSERT INTO dbo.emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
 	INSERT INTO expected VALUES (2, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
 
 	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'MANAGER'
@@ -239,21 +269,41 @@ GO
 	Constraint 3
 	All employees should be age 18 or older
 *******************************************************************************************/
-CREATE OR ALTER PROC testEmps.testEmpAge18OrHigherInvalidCase
+EXEC tSQLt.NewTestClass 'testEmployeesAge'
+
+GO
+CREATE OR ALTER PROC testEmployeesAge.SetUp
 AS
 BEGIN
+	EXEC tSQLt.FakeTable 'dbo.emp'
 	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_employee_age'
-	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547 -- A check constraint should be violated
-	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -17, GETDATE()), NULL, NULL, NULL, NULL, NULL)
+	SELECT *
+		INTO expected
+		FROM dbo.emp
 END
 GO
 
-CREATE OR ALTER PROC testEmps.testEmpAge18OrHigherValidCase
+CREATE OR ALTER PROC testEmployeesAge.testEmpAge18OrHigherInvalidCase
 AS
 BEGIN
-	EXEC tSQLt.ApplyConstraint 'dbo.emp', 'CHK_employee_age'
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 547
+
+	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -17, GETDATE()), NULL, NULL, NULL, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
+
+CREATE OR ALTER PROC testEmployeesAge.testEmpAge18OrHigherValidCase
+AS
+BEGIN
+	INSERT INTO expected VALUES (NULL, NULL, NULL, DATEADD(YEAR, -18, GETDATE()), NULL, NULL, NULL, NULL, NULL)
+
 	EXEC tSQLt.ExpectNoException
+
 	INSERT INTO emp VALUES (NULL, NULL, NULL, DATEADD(YEAR, -18, GETDATE()), NULL, NULL, NULL, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
 END
 GO
 
@@ -281,6 +331,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	INSERT INTO grd VALUES (2, 9, 20, NULL)
@@ -296,6 +347,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO grd VALUES (2, 11, 20, NULL)
@@ -304,13 +356,13 @@ BEGIN
 END
 GO
 
--- Er wordt wel gethrowd, maar omdat de transactie wordt terug gedraaid gaat tSQLt over zijn nek
 GO
 CREATE OR ALTER PROC testSalaryGradesCantOverlap.testInsertWithWrongUpperLimit
 AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	INSERT INTO grd VALUES (2, 10, 19, NULL)
@@ -325,6 +377,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO grd VALUES (2, 10, 21, NULL)
@@ -339,6 +392,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	UPDATE grd
@@ -356,6 +410,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 12, 20, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	UPDATE grd
@@ -370,8 +425,11 @@ GO
 CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithWrongUpperLimit
 AS
 BEGIN
-	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
-	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+	INSERT INTO grd VALUES	(1, 10, 20, NULL), 
+							(2, 10, 21, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), 
+								(2, 10, 21, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	UPDATE grd
@@ -386,13 +444,50 @@ GO
 CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithCorrectUpperLimit
 AS
 BEGIN
-	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
-	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 22, NULL)
+	INSERT INTO grd VALUES	(1, 10, 20, NULL), 
+							(2, 10, 21, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), 
+								(2, 10, 22, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	UPDATE grd
 		SET ulimit = 22
 		WHERE grade = 2
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testMultiRowInsertTestSucces
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), 
+								(2, 15, 25, NULL), 
+								(3, 30, 80, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO grd VALUES	(2, 15, 25, NULL), 
+							(3, 30, 80, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, grd
+END
+GO
+
+GO
+CREATE OR ALTER PROC testSalaryGradesCantOverlap.testMultiRowInsertTestError
+AS
+BEGIN
+	INSERT INTO grd VALUES (1, 10, 20, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
+
+	INSERT INTO grd VALUES	(2, 15, 25, NULL), 
+							(3, 10, 80, NULL)
 
 	EXEC tSQLt.AssertEqualsTable expected, grd
 END
@@ -423,7 +518,9 @@ CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testNormalInsert
 AS
 BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
-	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), (NULL, '24-DEC-2019', NULL, NULL, 2, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), 
+								(NULL, '24-DEC-2019', NULL, NULL, 2, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO offr VALUES (NULL, '24-DEC-2019', NULL, NULL, 2, NULL)
@@ -437,7 +534,9 @@ CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameDate
 AS
 BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
-	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), (NULL, '23-DEC-2019', NULL, NULL, 2, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), 
+								(NULL, '23-DEC-2019', NULL, NULL, 2, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 2, NULL)
@@ -451,7 +550,9 @@ CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameTrainer
 AS
 BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
-	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), (NULL, '24-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL), 
+								(NULL, '24-DEC-2019', NULL, NULL, 1, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO offr VALUES (NULL, '24-DEC-2019', NULL, NULL, 1, NULL)
@@ -466,6 +567,7 @@ AS
 BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
 	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50050
 
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
@@ -479,7 +581,9 @@ CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testSameTrainerNull
 AS
 BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
-	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL), (NULL, '24-DEC-2019', NULL, NULL, NULL, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL), 
+								(NULL, '24-DEC-2019', NULL, NULL, NULL, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO offr VALUES (NULL, '24-DEC-2019', NULL, NULL, NULL, NULL)
@@ -495,9 +599,46 @@ BEGIN
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
 	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL),
 								(NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, NULL, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testMultiRowInsertTestSucces
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL),
+								(NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+								(NULL, '27-NOV-2019', NULL, NULL, 3, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES (NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+							(NULL, '27-NOV-2019', NULL, NULL, 3, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testOffrIsUniqueByTrainerAndStarts.testMultiRowInsertTestError
+AS
+BEGIN
+	INSERT INTO offr VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL)
+	INSERT INTO expected VALUES (NULL, '23-DEC-2019', NULL, NULL, 1, NULL),
+								(NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+								(NULL, '27-NOV-2019', NULL, NULL, 3, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50050
+
+	INSERT INTO offr VALUES (NULL, '27-APR-2019', NULL, NULL, 2, NULL),
+							(NULL, '27-APR-2019', NULL, NULL, 2, NULL)
 
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
@@ -527,7 +668,8 @@ CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWithoutErrors
 AS
 BEGIN
 	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
-	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL), ('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL), 
+								('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectNoException
 
@@ -542,10 +684,13 @@ CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileEndWillSurpas
 AS
 BEGIN
 	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	INSERT INTO offr VALUES ('AM4DP', '2006-10-06', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -554,10 +699,13 @@ CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testInsertWhileStartsIsLessT
 AS
 BEGIN
 	INSERT INTO offr VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	INSERT INTO offr VALUES ('APEX', '2006-10-10', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -565,14 +713,18 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoEndWillSurpassStartOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+							('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+								('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	UPDATE offr
 		SET starts = '2006-10-09'
 		WHERE course = 'AM4DP' AND starts ='2006-10-08'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -580,14 +732,52 @@ GO
 CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testUpdateSoStartsIsLessThenEndOfAnotherOffer
 AS
 BEGIN
-	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
-	INSERT INTO offr VALUES ('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+							('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
+	INSERT INTO expected VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+								('PLSQL', '2006-10-18', NULL, NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
 
 	UPDATE offr
 		SET starts = '2006-10-17'
 		WHERE course = 'PLSQL' AND starts ='2006-10-18'
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testMultiRowInsertTestSucces
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT expected VALUES	('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL),
+							('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL),
+							('SQL', '2008-10-12', NULL, NULL, 1017, NULL)
+
+	EXEC tSQLt.ExpectNoException
+
+	INSERT INTO offr VALUES ('AM4PD', '2006-10-12', NULL, NULL, 1016, NULL),
+							('SQL', '2008-10-12', NULL, NULL, 1017, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
+END
+GO
+
+GO
+CREATE OR ALTER PROC testCourseOfferingsCantOverlap.testMultiRowInsertTestError
+AS
+BEGIN
+	INSERT INTO offr VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+	INSERT expected VALUES ('AM4DP', '2006-10-08', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50060
+
+	INSERT INTO offr VALUES ('APEX', '2006-10-12', NULL, NULL, 1016, NULL),
+							('SQL', '2008-10-10', NULL, NULL, 1016, NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -615,9 +805,11 @@ GO
 CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testNormalTerm
 AS
 BEGIN
-	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO emp VALUES	(1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), 
+							(2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 	INSERT INTO memp VALUES (1, 2)
 	INSERT INTO expected VALUES (1, NULL, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_TerminateEmp 1, NULL, NULL
@@ -630,8 +822,10 @@ GO
 CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testTermOfManagerWithActiveEmp
 AS
 BEGIN
-	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO emp VALUES	(1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), 
+							(2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 	INSERT INTO memp VALUES (2, 1)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50070
 
 	EXEC dbo.usp_TerminateEmp 1, NULL, NULL
@@ -644,10 +838,12 @@ GO
 CREATE OR ALTER PROC testTermEmpNotManagingActiveEmp.testTermOfManagerWithInactiveEmp
 AS
 BEGIN
-	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO emp VALUES	(1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), 
+							(2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 	INSERT INTO memp VALUES (1, 2)
 	INSERT INTO term VALUES (1, NULL, NULL)
 	INSERT INTO expected VALUES (1, NULL, NULL), (2, NULL, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC dbo.usp_TerminateEmp 2, NULL, NULL
@@ -680,7 +876,8 @@ GO
 CREATE OR ALTER PROC testNotRegOnCourseTaughtBySameEmp.testNormalInsert
 AS
 BEGIN
-	INSERT INTO emp VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+	INSERT INTO emp VALUES	(1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), 
+							(2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 	INSERT INTO offr VALUES (1016, '2006-10-07', NULL, NULL, 1, NULL)
 	INSERT INTO expected VALUES (2, 1016, '2006-10-07', NULL)
 	
@@ -739,10 +936,13 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testInsertHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.AssertEqualsTable expected, offr
 END
@@ -752,11 +952,13 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testInsertNotHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
-	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+
 	INSERT INTO offr VALUES (3, NULL, NULL, NULL, 1, 'Arnhem')
 
 	EXEC tSQLt.AssertEqualsTable expected, offr
@@ -767,11 +969,15 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateLocNotHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
-	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+							(3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+								(3, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+
 	UPDATE offr
 		SET loc = 'Arnhem'
 		WHERE course = 3 AND trainer = 1
@@ -784,9 +990,14 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateLocOrTrainerHalfHameBased --Niet mogelijk om dit scenario voor trainer en locatie los te testen
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 2, 'Arnhem')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+							(3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+								(3, NULL, NULL, NULL, 2, 'Arnhem')
+
 	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
 
 	UPDATE offr
 		SET loc = 'Arnhem', trainer = 2
@@ -800,11 +1011,15 @@ GO
 CREATE OR ALTER PROC testAtLeastHalfHomeBasedOfferings.testUpdateTrainerNotHalfHameBased
 AS
 BEGIN
-	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
-	EXEC tSQLt.ExpectNoException
-	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), (2, NULL, NULL, NULL, 1, 'Zutphen'), (3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO offr VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+							(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+							(3, NULL, NULL, NULL, 1, 'Zutphen')
+	INSERT INTO expected VALUES (1, NULL, NULL, NULL, 1, 'Arnhem'), 
+								(2, NULL, NULL, NULL, 1, 'Zutphen'), 
+								(3, NULL, NULL, NULL, 1, 'Zutphen')
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50090
+
 	UPDATE offr
 		SET trainer = 3
 		WHERE course = 3 AND trainer = 1
@@ -832,7 +1047,7 @@ BEGIN
 		FROM dbo.offr
 END
 GO
--- TODO: assert equalsTable
+
 GO
 CREATE OR ALTER PROC testCourseStatusChange.testSingleInsertToMakeNoOffrChange
 AS
@@ -842,12 +1057,13 @@ BEGIN
 							(NULL, 'PLSQL', '2006-10-08', NULL),
 							(NULL, 'PLSQL', '2006-10-08', NULL),
 							(NULL, 'PLSQL', '2006-10-08', NULL)
-
 	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'SCHD', NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectNoException
 	
 	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -861,12 +1077,13 @@ BEGIN
 							(NULL, 'PLSQL', '2006-10-08', NULL),
 							(NULL, 'PLSQL', '2006-10-08', NULL),
 							(NULL, 'PLSQL', '2006-10-08', NULL)
-
 	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectNoException
 	
 	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -886,13 +1103,15 @@ BEGIN
 							(NULL, 'SQL', '2008-10-08', NULL),
 							(NULL, 'SQL', '2008-10-08', NULL),
 							(NULL, 'SQL', '2008-10-08', NULL)
-
 	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL),
 								('SQL', '2008-10-08', 'CONF', NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectNoException
 	
-	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+	INSERT INTO reg VALUES	(NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'SQL', '2008-10-08', NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -911,13 +1130,15 @@ BEGIN
 							(NULL, 'SQL', '2008-10-08', NULL),
 							(NULL, 'SQL', '2008-10-08', NULL),
 							(NULL, 'SQL', '2008-10-08', NULL)
-
 	INSERT INTO expected VALUES ('PLSQL', '2006-10-08', 'CONF', NULL, 1016, NULL),
 								('SQL', '2008-10-08', 'SCHD', NULL, 1016, NULL)
 
 	EXEC tSQLt.ExpectNoException
 	
-	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), (NULL, 'SQL', '2008-10-08', NULL)
+	INSERT INTO reg VALUES (NULL, 'PLSQL', '2006-10-08', NULL), 
+							(NULL, 'SQL', '2008-10-08', NULL)
+
+	EXEC tSQLt.AssertEqualsTable expected, offr
 END
 GO
 
@@ -942,12 +1163,15 @@ BEGIN
 	SELECT *
 		INTO expected
 		FROM dbo.offr
-	INSERT INTO emp VALUES (1, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL), 
-		(2, NULL, 'SALESREP', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
-		(0, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
-		(4, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
-		(5, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL)
-	INSERT INTO reg VALUES (4, 'DMDD', NULL, NULL), (3, 'DI', NULL, NULL), (5, 'DI', NULL, NULL)
+
+	INSERT INTO emp VALUES  (1, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL), 
+							(2, NULL, 'SALESREP', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
+							(0, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL),
+							(4, NULL, 'TRAINER', NULL, GETDATE(), NULL, NULL, NULL, NULL),
+							(5, NULL, 'TRAINER', NULL, DATEADD(YEAR, -1, GETDATE()), NULL, NULL, NULL, NULL)
+	INSERT INTO reg VALUES	(4, 'DMDD', NULL, NULL), 
+							(3, 'DI', NULL, NULL), 
+							(5, 'DI', NULL, NULL)
 END
 GO
 
@@ -958,6 +1182,7 @@ BEGIN
 	DECLARE @date DATE = GETDATE();
 
 	INSERT INTO expected VALUES ('DI', @date, 'CONF', 2, 5, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 5, 'Zutphen'
@@ -973,6 +1198,7 @@ BEGIN
 	DECLARE @date DATE = GETDATE();
 
 	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 5, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 5, 'Zutphen'
@@ -988,6 +1214,7 @@ BEGIN
 	DECLARE @date DATE = GETDATE();
 
 	INSERT INTO expected VALUES ('DMDD', @date, 'CONF', 2, 4, 'Zutphen')
+
 	EXEC tSQLt.ExpectNoException
 
 	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 4, 'Zutphen'
@@ -1001,6 +1228,7 @@ CREATE OR ALTER PROC testTeacherRequirements.testTrainerNotHadCourseAndNotEmploy
 AS
 BEGIN
 	DECLARE @date DATE = GETDATE();
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50111
 
 	EXEC usp_InsertOffering 'DI', @date, 'CONF', 2, 4, 'Zutphen'
@@ -1014,6 +1242,7 @@ CREATE OR ALTER PROC testTeacherRequirements.testNotATrainer
 AS
 BEGIN
 	DECLARE @date DATE = GETDATE();
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50110
 
 	EXEC usp_InsertOffering 'DMDD', @date, 'CONF', 2, 2, 'Zutphen'
