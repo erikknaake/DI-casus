@@ -67,6 +67,12 @@
           <AssociatedConnUserName>sa</AssociatedConnUserName>
           <FullPath>Opdracht B constraints.sql</FullPath>
         </FileNode>
+        <FileNode Name="Opdracht E code generatie.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName>sa</AssociatedConnUserName>
+          <FullPath>Opdracht E code generatie.sql</FullPath>
+        </FileNode>
         <FileNode Name="Opdracht F security.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
