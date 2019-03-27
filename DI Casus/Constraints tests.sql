@@ -331,6 +331,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	INSERT INTO grd VALUES (2, 9, 20, NULL)
@@ -346,6 +347,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO grd VALUES (2, 11, 20, NULL)
@@ -360,6 +362,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	INSERT INTO grd VALUES (2, 10, 19, NULL)
@@ -374,6 +377,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	INSERT INTO grd VALUES (2, 10, 21, NULL)
@@ -388,6 +392,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	UPDATE grd
@@ -405,6 +410,7 @@ AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 11, 20, NULL)
 	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 12, 20, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	UPDATE grd
@@ -419,8 +425,11 @@ GO
 CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithWrongUpperLimit
 AS
 BEGIN
-	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
-	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
+	INSERT INTO grd VALUES	(1, 10, 20, NULL), 
+							(2, 10, 21, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), 
+								(2, 10, 21, NULL)
+
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
 	UPDATE grd
@@ -435,8 +444,11 @@ GO
 CREATE OR ALTER PROC testSalaryGradesCantOverlap.testUpdateWithCorrectUpperLimit
 AS
 BEGIN
-	INSERT INTO grd VALUES (1, 10, 20, NULL), (2, 10, 21, NULL)
-	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 10, 22, NULL)
+	INSERT INTO grd VALUES	(1, 10, 20, NULL), 
+							(2, 10, 21, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), 
+								(2, 10, 22, NULL)
+
 	EXEC tSQLt.ExpectNoException
 
 	UPDATE grd
@@ -452,11 +464,14 @@ CREATE OR ALTER PROC testSalaryGradesCantOverlap.testMultiRowInsertTestSucces
 AS
 BEGIN
 	INSERT INTO grd VALUES (1, 10, 20, NULL)
-	INSERT INTO expected VALUES (1, 10, 20, NULL), (2, 15, 25, NULL), (3, 30, 80, NULL)
+	INSERT INTO expected VALUES (1, 10, 20, NULL), 
+								(2, 15, 25, NULL), 
+								(3, 30, 80, NULL)
 
 	EXEC tSQLt.ExpectNoException
 
-	INSERT INTO grd VALUES (2, 15, 25, NULL), (3, 30, 80, NULL)
+	INSERT INTO grd VALUES	(2, 15, 25, NULL), 
+							(3, 30, 80, NULL)
 
 	EXEC tSQLt.AssertEqualsTable expected, grd
 END
@@ -471,7 +486,8 @@ BEGIN
 
 	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50040
 
-	INSERT INTO grd VALUES (2, 15, 25, NULL), (3, 10, 80, NULL)
+	INSERT INTO grd VALUES	(2, 15, 25, NULL), 
+							(3, 10, 80, NULL)
 
 	EXEC tSQLt.AssertEqualsTable expected, grd
 END
