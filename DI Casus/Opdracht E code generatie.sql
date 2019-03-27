@@ -129,7 +129,6 @@ END
 GO
 
 BEGIN TRAN
-	--EXEC usp_generateHistTable 'grd'
 	EXEC usp_generateAllHistory
 	SELECT *
 		FROM INFORMATION_SCHEMA.TABLES
