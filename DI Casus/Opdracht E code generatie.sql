@@ -8,7 +8,7 @@ GO
 	GO
 	CREATE TABLE HIST_<tabel naam> (
 		ts TIMESTAMP NOT NULL,
-		<kolommen>
+		<kolommen met datatypes>
 
 		CONSTRAINT pk_HIST_<table_name> PRIMARY KEY (ts, <pk uit tabel>)
 	)
@@ -18,7 +18,7 @@ GO
 		AFTER INSERT, UPDATE
 	AS
 	BEGIN
-		INSERT INTO HIST_<tabel naam>
+		INSERT INTO HIST_<tabel naam> (<kolommen>)
 			SELECT * FROM inserted
 	END
 	GO
