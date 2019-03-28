@@ -87,7 +87,7 @@ BEGIN
 				) AND NOT EXISTS (
 					SELECT 1
 						FROM Emp
-						WHERE job = 'ADMIN' and deptno = @deptno AND empno <> @empno -- Het is de laatste admin als hier true uitkomt
+						WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno -- Het is de laatste admin als hier true uitkomt
 				) AND EXISTS (
 					SELECT 1
 						FROM Emp
@@ -110,6 +110,7 @@ BEGIN
 END
 GO
 
+
 /*******************************************************************************************
 	3.	The company hires adult personnel only.
 	age >= 18 OK
@@ -120,7 +121,7 @@ IF OBJECT_ID('dbo.CHK_employee_age', 'C') IS NOT NULL
 ALTER TABLE emp
 	ADD CONSTRAINT CHK_employee_age
 	CHECK (DATEADD(YEAR, 18, born) < GETDATE())
-go
+GO
 
 
 /*******************************************************************************************
@@ -191,7 +192,7 @@ GO
 	worden. Het zou ook een mogelijkheid zijn om de procedure bij 11 uit te breiden
 	maar voor de duidelijkheid is dit los getrokken.
 *******************************************************************************************/
-IF OBJECT_ID('dbo.ofr_unq', 'UQ') IS NOT NULL
+IF OBJECT_ID('dbo.ofr_unq', 'UQ') IS NOT NULL --Deze constraint moest verwijderd worden om vervolgens zelf een uitgebreidere versie ervan te implementeren
 	ALTER TABLE offr DROP CONSTRAINT ofr_unq
 
 GO
@@ -223,6 +224,7 @@ BEGIN
 	END CATCH
 END
 GO
+
 
 /*******************************************************************************************
 	6.	Trainers cannot teach different courses simultaneously.
