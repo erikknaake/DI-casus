@@ -55,17 +55,17 @@
           <AssociatedConnUserName>sa</AssociatedConnUserName>
           <FullPath>Opdracht B constraints.sql</FullPath>
         </FileNode>
-		<FileNode Name="Opdracht E code generatie.sql">
-			<AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
-			<AssociatedConnSrvName>localhost</AssociatedConnSrvName>
-			<AssociatedConnUserName>sa</AssociatedConnUserName>
-			<FullPath>Opdracht E code generatie.sql</FullPath>
-		</FileNode>
         <FileNode Name="Opdracht D indexing.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName>sa</AssociatedConnUserName>
           <FullPath>Opdracht D indexing.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Opdracht E code generatie.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName>sa</AssociatedConnUserName>
+          <FullPath>Opdracht E code generatie.sql</FullPath>
         </FileNode>
         <FileNode Name="Opdracht F security.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:False:sa</AssociatedConnectionMoniker>
@@ -76,7 +76,14 @@
       </Items>
     </LogicalFolder>
     <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
-      <Items />
+      <Items>
+        <FileNode Name="Opdracht C concurrency.docx">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>Opdracht C concurrency.docx</FullPath>
+        </FileNode>
+      </Items>
     </LogicalFolder>
   </Items>
 </SqlWorkbenchSqlProject>

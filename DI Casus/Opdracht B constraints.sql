@@ -12,9 +12,6 @@ go
 
 	is not president || earns >= 10k
 *******************************************************************************************/
-/*SELECT *
-	FROM emp
-	WHERE job = 'PRESIDENT'*/
 
 IF OBJECT_ID('dbo.CHK_PresidentSalary', 'C') IS NOT NULL 
     ALTER TABLE dbo.emp DROP CONSTRAINT CHK_PresidentSalary 
@@ -130,7 +127,7 @@ GO
 /*******************************************************************************************
 	4.	A salary grade overlaps with at most one lower salary grade. 
 	The llimit of a salary grade must be higher than the llimit of the next lower salary grade. 
-	The ulimit of the salary grade must be higher than the ulimit of the next lower salary grade. TODO: valideren of next lower salary grade inderdaad op grade slaat
+	The ulimit of the salary grade must be higher than the ulimit of the next lower salary grade.
 
 	Kan misgaan bij:
 
@@ -242,9 +239,9 @@ GO
 	- Nieuwe insert wordt gedaan in offr, en de starts tijd ligt binnen een bestaande offr die gegeven wordt (starts + dur)
 	- Nieuwe insert wordt gedaan in offr, en de dur van de crs komt te vallen wanneer er al een andere offr wordt gegeven.
 	- Bij een update van de starts in offr waardoor deze binnen een andere offr komt te liggen.
-	- Bij een update van de duur van een course in de crs tabel waardoor deze komt te vallen binnen de duur van een andere offer
+	- Bij een update van de duur van een course in de crs tabel waardoor deze komt te vallen binnen de duur van een ander offer
 
-	-- Deze trigger handeld geen inserts of deletes af binnen de crs tabel, daarom hier niet aan voldaan worden
+	-- Deze trigger handelt geen inserts of deletes af binnen de crs tabel, daarom hier niet aan voldaan worden
 
 *******************************************************************************************/
 GO
@@ -294,7 +291,7 @@ GO
 	- Een update in term waarbij de empno naar een mgr in memp wordt gezet
 
 	Gekozen voor een stored procedure voor het terminaten van een employee (insert in term), 
-	omdat dit een voor de handliggende actie is en
+	omdat dit een voor de hand liggende actie is en
 	zodat er een default leftcomp date wordt ingevuld en een trigger geen voordelen heeft
 *******************************************************************************************/
 GO
@@ -406,9 +403,9 @@ GO
 
 	Kan misgaan bij:
 	- Update in crs waarbij de duration wordt veranderd
-	- Update in offr waarbij de trainer wordt veranderd en dus de course inneens home based of niet meer home based is
-	- Update in dept waarbij de locatie wordt aangepast en dus de course inneens home based of niet meer home based is
-	- Update in emp waardoor de trainer in een andere locatie komt te werken en dus de course inneens home based of niet meer home based is
+	- Update in offr waarbij de trainer wordt veranderd en dus de course ineens home based of niet meer home based is
+	- Update in dept waarbij de locatie wordt aangepast en dus de course ineens home based of niet meer home based is
+	- Update in emp waardoor de trainer in een andere locatie komt te werken en dus de course ineens home based of niet meer home based is
 	- Insert in offr waardoor niet meer de helft van de offerings home based is
 	- Delete in offr waardoor niet meer de helft van de offerings home based is
 
