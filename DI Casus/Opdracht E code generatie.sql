@@ -98,7 +98,7 @@ BEGIN
 END
 GO
 
--- Deze functie zal voor alle tabbelen de history tabel + trigger aanmaken.
+-- Deze functie zal voor alle tabellen de history tabel + trigger aanmaken.
 GO
 CREATE OR ALTER PROC usp_generateAllHistory
 AS
