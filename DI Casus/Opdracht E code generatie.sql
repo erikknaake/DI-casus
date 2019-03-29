@@ -23,7 +23,7 @@ GO
 	END
 	GO
 *******************************************************************************************/
-
+GO
 CREATE OR ALTER PROC usp_generateHistTable
 	(
 		@tableName VARCHAR(MAX)
@@ -98,6 +98,7 @@ BEGIN
 END
 GO
 
+-- Deze functie zal voor alle tabbelen de history tabel + trigger aanmaken.
 GO
 CREATE OR ALTER PROC usp_generateAllHistory
 AS
@@ -128,6 +129,7 @@ BEGIN
 END
 GO
 
+-- Testjes
 BEGIN TRAN
 	EXEC usp_generateAllHistory
 	SELECT *
@@ -137,6 +139,8 @@ BEGIN TRAN
 	INSERT INTO grd VALUES (12, 11000, 17000, 6500)
 	SELECT * FROM HIST_grd
 	INSERT INTO grd VALUES (13, 12000, 18000, 7000)
+	SELECT * FROM HIST_grd -- Checken of er geen duplicates ontstaan
+	UPDATE grd SET bonus = 7500 WHERE grade = 13
 	SELECT * FROM HIST_grd -- Checken of er geen duplicates ontstaan
 ROLLBACK TRAN
 
