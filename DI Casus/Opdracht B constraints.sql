@@ -45,6 +45,7 @@ go
 	- Als in emp de departement van de laatste administrator van een afdeling wordt geupdatet 
 	en er een president/manager is in de oude afdeling OF
 	- Als in emp de laatste administrator van de afdeling gedeletet wordt en er een president/manager is in de afdeling
+	- Als de laatste admin in een department geterminate wordt.
 
 	Er is gekozen om de update van de job te implementeren, 
 	omdat dit evenveel gevallen zijn als updates voor het updaten van het departmentnummer (de meeste gevallen)
@@ -73,25 +74,33 @@ BEGIN
 						) 
 			IF (@job = 'PRESIDENT' OR @job = 'MANAGER') AND NOT EXISTS (
 				-- Wordt een president of manager, check of er nog een (andere, mag niet zich zelf zijn met zijn oude job) admin is
-				SELECT 1
+				SELECT empno
 					FROM emp
 					WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno
+				EXCEPT 
+				SELECT empno 
+					FROM term
 				)
-		
 				THROW 50020, 'Er is geen admin in deze afdeling', 1
 			IF EXISTS (
 				-- Emp die geupdate wordt is een admin, dus als er een President of Manager werkt EN het de laatste admin is in de afdeling, tegenhouden
-				SELECT 1
+				SELECT empno
 					FROM Emp
 					WHERE empno = @empno AND job = 'ADMIN'
 				) AND NOT EXISTS (
-					SELECT 1
+					SELECT empno
 						FROM Emp
 						WHERE job = 'ADMIN' AND deptno = @deptno AND empno <> @empno -- Het is de laatste admin als hier true uitkomt
+					EXCEPT
+					SELECT empno
+						FROM term
 				) AND EXISTS (
-					SELECT 1
+					SELECT empno
 						FROM Emp
 						WHERE deptno = @deptno AND (job = 'PRESIDENT' OR job = 'MANAGER') -- En er werkt een president of manager in de afdeling
+					EXCEPT
+					SELECT empno
+						FROM term
 				)
 				THROW 50021, 'Je kunt de job van de laatste admin van een afdeling waar een president of manager werkt niet veranderen', 1
 			UPDATE emp
@@ -109,7 +118,6 @@ BEGIN
 	END CATCH
 END
 GO
-
 
 /*******************************************************************************************
 	3.	The company hires adult personnel only.

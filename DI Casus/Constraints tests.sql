@@ -60,6 +60,7 @@ CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.SetUp
 AS
 BEGIN
 	EXEC tSQLt.FakeTable 'dbo.emp'
+	EXEC tSQLt.FakeTable 'dbo.term'
 	SELECT *
 		INTO expected
 		FROM dbo.emp
@@ -264,7 +265,55 @@ BEGIN
 END
 GO
 
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testOtherToManagerWithTerminatedAdmin
+AS
+BEGIN
+	INSERT INTO emp VALUES  (1, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10),
+							(2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO term VALUES (1, NULL, NULL)
+	INSERT INTO expected VALUES (1, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10), 
+								(2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10)
 
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
+
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'MANAGER'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToManagerWhenAdminIsTerminated
+AS
+BEGIN
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO term VALUES (2, NULL, NULL)
+	INSERT INTO expected VALUES (2, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+
+	EXEC tSQLt.ExpectException @ExpectedErrorNumber = 50020
+
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'MANAGER'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
+
+GO
+CREATE OR ALTER PROC testAdminInEveryDeptAPresidentOrManagerWorks.testLastAdminToOtherWhenManagerIsTerminated
+AS
+BEGIN
+	INSERT INTO emp VALUES (2, NULL, 'ADMIN', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+	INSERT INTO term VALUES (3, NULL, NULL)
+	INSERT INTO expected VALUES (2, NULL, 'SALESREP', NULL, NULL, NULL, NULL, NULL, 10), (3, NULL, 'MANAGER', NULL, NULL, NULL, NULL, NULL, 10)
+
+	EXEC tSQLt.ExpectNoException
+
+	EXEC dbo.usp_UpdateEmpJob @empno = 2, @job = 'SALESREP'
+
+	EXEC tSQLt.AssertEqualsTable expected, emp
+END
+GO
 /*******************************************************************************************
 	Constraint 3
 	All employees should be age 18 or older

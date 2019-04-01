@@ -6,22 +6,15 @@ BEGIN TRAN
 	-- zodat er een covering index ontstaat
 	-- En MS SQL ervoor kiest om een nonclustered index seek te gaan doen in plaats van een clustered index scan.
 	-- Op de huidige populatie is dit een vrijwel onmeetbaar verschil, echter kan het op grote populatie veel uitmaken
-	-- omdat deze stored procedure 2 keer gebruik maakt van deze index
+	-- omdat deze stored procedure 3 keer gebruik maakt van deze index
 	CREATE NONCLUSTERED INDEX nci_Emp
 		ON emp(job) include (deptno)
 
 	SET STATISTICS IO ON
 	EXEC usp_UpdateEmpJob @empno = 1011, @job = 'TRAINER' WITH RECOMPILE
-	-- 2 clustered index scans naar non clustered index seek
-
-	-- Subtree cost zonder NCI: 0.00991332
-	-- 2, 6, 2 logical reads, geen physical reads, 2 scans zonder NCI.
-	-- Subtree cost met NCI: 0.0098764
-	-- 2, 8, 6 logical reads, geen physical reads, 3 scans met NCI
+	-- 3 clustered index scans naar non clustered index seek
 ROLLBACK TRAN
 
-
-SELECT * FROM offr
 
 BEGIN TRAN
 	-- Door deze index wordt bij query 2 in het execution plan gekozen voor een nonclustered index seek in plaats van een clustered index scan
